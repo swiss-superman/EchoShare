@@ -7,6 +7,7 @@ const DUPLICATE_SEARCH_WINDOW_DAYS = 30;
 const DUPLICATE_COORDINATE_DELTA = 0.02;
 const MAX_DUPLICATE_CANDIDATES = 5;
 const DUPLICATE_SIMILARITY_THRESHOLD = 0.74;
+const MAX_ANALYSIS_IMAGES = 2;
 
 const REPORT_ANALYSIS_RESPONSE_SCHEMA = {
   type: "object",
@@ -91,6 +92,14 @@ type DuplicatePromptCandidate = {
   vectorSimilarity: number | null;
 };
 
+type ReportImageForAnalysis = {
+  id: string;
+  publicUrl: string;
+  mimeType: string;
+  isPrimary: boolean;
+  sizeBytes: number;
+};
+
 let cachedClient: GoogleGenAI | null = null;
 
 function getGeminiClient() {
@@ -155,6 +164,18 @@ async function getImageBase64(publicUrl: string) {
 
   const arrayBuffer = await response.arrayBuffer();
   return Buffer.from(arrayBuffer).toString("base64");
+}
+
+function selectImagesForAnalysis(images: ReportImageForAnalysis[]) {
+  return [...images]
+    .sort((left, right) => {
+      if (left.isPrimary !== right.isPrimary) {
+        return left.isPrimary ? -1 : 1;
+      }
+
+      return left.sizeBytes - right.sizeBytes;
+    })
+    .slice(0, MAX_ANALYSIS_IMAGES);
 }
 
 function buildEmbeddingInput(report: {
@@ -237,7 +258,7 @@ async function findVectorDuplicateCandidates(input: {
     `
       SELECT
         re."reportId" AS "reportId",
-        1 - (re.embedding <=> CAST($1 AS extensions.vector)) AS similarity
+        1 - (re.embedding OPERATOR(extensions.<=>) CAST($1 AS extensions.vector)) AS similarity
       FROM report_embeddings re
       INNER JOIN "Report" r ON r.id = re."reportId"
       INNER JOIN "Location" l ON l.id = r."locationId"
@@ -245,7 +266,7 @@ async function findVectorDuplicateCandidates(input: {
         AND r."observedAt" >= $3
         AND l.latitude BETWEEN $4 AND $5
         AND l.longitude BETWEEN $6 AND $7
-      ORDER BY re.embedding <=> CAST($1 AS extensions.vector)
+      ORDER BY re.embedding OPERATOR(extensions.<=>) CAST($1 AS extensions.vector)
       LIMIT $8
     `,
     toVectorLiteral(input.embedding),
@@ -446,6 +467,7 @@ export async function enrichReportById(reportId: string, analysisId?: string) {
       ),
       "Potential duplicate candidates:",
       JSON.stringify(orderedCandidates, null, 2),
+      `Only up to ${MAX_ANALYSIS_IMAGES} representative image(s) are attached for multimodal analysis to control latency and cost.`,
       "Use evidenceSignals for the concrete reasons behind the classification and severity.",
       "Use moderationNotes for anything that needs human review, ambiguity, low confidence, or image-quality caveats.",
     ].join("\n\n");
@@ -454,7 +476,7 @@ export async function enrichReportById(reportId: string, analysisId?: string) {
       { text: prompt },
     ];
 
-    for (const image of report.images.slice(0, 3)) {
+    for (const image of selectImagesForAnalysis(report.images)) {
       try {
         const base64 = await getImageBase64(image.publicUrl);
         parts.push(createPartFromBase64(base64, image.mimeType));
