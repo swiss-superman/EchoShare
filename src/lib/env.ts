@@ -33,13 +33,7 @@ export function getAppBaseUrl() {
 export function getSupabaseStorageConfig() {
   return {
     url: process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? null,
-    serviceRoleKey:
-      process.env.SUPABASE_SERVICE_ROLE_KEY ??
-      process.env.SUPABASE_PUBLISHABLE_KEY ??
-      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
-      process.env.SUPABASE_ANON_KEY ??
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
-      null,
+    serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? null,
     bucket: process.env.SUPABASE_STORAGE_BUCKET ?? "report-images",
   };
 }
@@ -51,6 +45,7 @@ export function isSupabaseStorageConfigured() {
 
 export function getN8nWebhookConfig() {
   return {
+    reportCreated: process.env.N8N_REPORT_CREATED_WEBHOOK_URL ?? null,
     highSeverity: process.env.N8N_HIGH_SEVERITY_WEBHOOK_URL ?? null,
     weeklyDigest: process.env.N8N_WEEKLY_DIGEST_WEBHOOK_URL ?? null,
     sharedSecret: process.env.N8N_SHARED_SECRET ?? null,

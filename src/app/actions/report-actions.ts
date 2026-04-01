@@ -2,8 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { enrichReportById } from "@/lib/ai/gemini";
-import { emitHighSeverityReportWebhook } from "@/lib/automation/n8n";
+import { after } from "next/server";
+import {
+  enqueueReportEnrichment,
+  enrichReportById,
+} from "@/lib/ai/gemini";
+import {
+  emitHighSeverityReportWebhook,
+  emitReportCreatedWebhook,
+} from "@/lib/automation/n8n";
 import { isGeminiConfigured } from "@/lib/env";
 import { dbOrThrow } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
@@ -17,6 +24,52 @@ function revalidateCorePaths() {
   revalidatePath("/map");
   revalidatePath("/dashboard");
   revalidatePath("/community");
+}
+
+async function runQueuedReportTasks(input: {
+  reportId: string;
+  reportUrl: string;
+  title: string;
+  waterBodyName: string;
+  severity: string;
+  category: string;
+  analysisId: string | null;
+}) {
+  if (input.severity === "HIGH" || input.severity === "CRITICAL") {
+    await emitHighSeverityReportWebhook({
+      reportId: input.reportId,
+      title: input.title,
+      waterBodyName: input.waterBodyName,
+      severity: input.severity,
+      category: input.category,
+      reportUrl: input.reportUrl,
+    });
+  }
+
+  if (!input.analysisId) {
+    return;
+  }
+
+  const handedToAutomation = await emitReportCreatedWebhook({
+    reportId: input.reportId,
+    analysisId: input.analysisId,
+    title: input.title,
+    waterBodyName: input.waterBodyName,
+    severity: input.severity,
+    category: input.category,
+    reportUrl: input.reportUrl,
+    aiRequested: true,
+  });
+
+  if (handedToAutomation) {
+    return;
+  }
+
+  try {
+    await enrichReportById(input.reportId, input.analysisId);
+  } catch (error) {
+    console.error("Report enrichment failed", error);
+  }
 }
 
 export async function createReportAction(formData: FormData) {
@@ -91,32 +144,37 @@ export async function createReportAction(formData: FormData) {
     },
   });
 
-  if (parsed.data.userSeverity === "HIGH" || parsed.data.userSeverity === "CRITICAL") {
-    await emitHighSeverityReportWebhook({
+  const analysisId = isGeminiConfigured() ? await enqueueReportEnrichment(report.id) : null;
+  const reportUrl = `/reports/${report.id}`;
+
+  after(async () => {
+    await runQueuedReportTasks({
       reportId: report.id,
+      reportUrl,
       title: report.title,
       waterBodyName: report.waterBodyName,
       severity: report.userSeverity,
       category: report.category,
-      reportUrl: `/reports/${report.id}`,
+      analysisId,
     });
-  }
-
-  if (isGeminiConfigured()) {
-    try {
-      await enrichReportById(report.id);
-    } catch (error) {
-      console.error("Report enrichment failed", error);
-    }
-  }
+  });
 
   revalidateCorePaths();
-  redirect(`/reports/${report.id}`);
+  redirect(reportUrl);
 }
 
 export async function runReportAiEnrichmentAction(reportId: string) {
   await requireUser();
-  await enrichReportById(reportId);
+  const analysisId = await enqueueReportEnrichment(reportId);
+
+  after(async () => {
+    try {
+      await enrichReportById(reportId, analysisId);
+    } catch (error) {
+      console.error("Manual report enrichment failed", error);
+    }
+  });
+
   revalidateCorePaths();
   revalidatePath(`/reports/${reportId}`);
 }

@@ -8,7 +8,7 @@ EchoShare is a coded web application first and an automation-enhanced system sec
 - Auth: Google OAuth via `next-auth` and Prisma adapter
 - Source of truth: PostgreSQL through Prisma ORM
 - Maps: Leaflet + OpenStreetMap tiles + `leaflet.heat`
-- AI: Gemini 2.5 Flash via `@google/genai`
+- AI: Gemini 2.5 Flash + Gemini embeddings via `@google/genai`
 - Automation: n8n only for background alerts, digests, and optional queued enrichment
 
 ## Architecture decisions
@@ -23,12 +23,15 @@ EchoShare is a coded web application first and an automation-enhanced system sec
    `Report` and `ReportImage` store user truth.
    `ReportAIAnalysis` stores AI-assisted interpretation, duplicate hints, and action recommendations.
 
-4. Maps stay fully free
+4. Duplicate assistance uses pgvector, not prompt guessing alone
+   Report text embeddings are stored in PostgreSQL with `pgvector`, then filtered by geo/time before Gemini performs the final duplicate reasoning step.
+
+5. Maps stay fully free
    The map stack uses OpenStreetMap raster tiles and Leaflet in the browser. Heatmap rendering is calculated client-side from persisted report coordinates and severity.
 
-5. n8n stays at the edge
+6. n8n stays at the edge
    The app works without n8n.
-   n8n only augments the platform through outbound webhooks and secure internal routes.
+   n8n only augments the platform through outbound webhooks, retries, digests, and secure internal routes.
 
 ## Folder structure
 
