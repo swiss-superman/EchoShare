@@ -174,13 +174,6 @@ export function ReportMap({
           </Marker>
         ))}
       </MapContainer>
-      {markers.length === 0 ? (
-        <div className="pointer-events-none absolute inset-x-4 bottom-4 z-[1000] rounded-[1.2rem] border border-white/80 bg-[rgba(255,251,245,0.92)] px-4 py-3 text-sm leading-6 text-[#36515f] shadow-[0_12px_30px_rgba(12,26,37,0.12)] backdrop-blur-md">
-          No reports are available for the current deployment yet. The map is
-          still live for exploration, and markers will appear automatically
-          once PostgreSQL-backed report data is connected.
-        </div>
-      ) : null}
     </div>
   );
 }
