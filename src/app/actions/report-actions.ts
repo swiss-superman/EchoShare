@@ -17,6 +17,7 @@ import { requireUser } from "@/lib/session";
 import { saveReportImages } from "@/lib/upload";
 import { slugify } from "@/lib/utils";
 import { reportSchema } from "@/lib/validators";
+import type { ReportCreateActionState } from "@/components/reports/report-create-form-state";
 
 function revalidateCorePaths() {
   revalidatePath("/");
@@ -72,94 +73,117 @@ async function runQueuedReportTasks(input: {
   }
 }
 
-export async function createReportAction(formData: FormData) {
+export async function createReportAction(
+  _previousState: ReportCreateActionState,
+  formData: FormData,
+): Promise<ReportCreateActionState> {
   const user = await requireUser();
   const db = dbOrThrow();
-
   const parsed = reportSchema.safeParse(Object.fromEntries(formData.entries()));
 
   if (!parsed.success) {
-    throw new Error(parsed.error.issues[0]?.message ?? "Invalid report payload.");
+    const flattened = parsed.error.flatten();
+    return {
+      status: "error",
+      message:
+        flattened.formErrors[0] ??
+        parsed.error.issues[0]?.message ??
+        "Check the highlighted fields and try again.",
+      fieldErrors: flattened.fieldErrors,
+    };
   }
 
-  const uploads = await saveReportImages(
-    formData.getAll("images").filter((value): value is File => value instanceof File),
-  );
+  let reportUrl: string;
 
-  const location = await db.location.create({
-    data: {
-      label: parsed.data.address || parsed.data.waterBodyName,
-      address: parsed.data.address || null,
-      locality: parsed.data.locality || null,
-      district: parsed.data.district || null,
-      state: parsed.data.state || null,
-      country: parsed.data.country || "India",
-      latitude: parsed.data.latitude,
-      longitude: parsed.data.longitude,
-    },
-  });
+  try {
+    const uploads = await saveReportImages(
+      formData.getAll("images").filter((value): value is File => value instanceof File),
+    );
 
-  const waterBodySlug = slugify(parsed.data.waterBodyName);
-
-  const waterBody = await db.waterBody.upsert({
-    where: { slug: waterBodySlug },
-    update: {
-      state: parsed.data.state || undefined,
-      city: parsed.data.locality || undefined,
-      country: parsed.data.country || "India",
-    },
-    create: {
-      name: parsed.data.waterBodyName,
-      slug: waterBodySlug,
-      type: "OTHER",
-      city: parsed.data.locality || null,
-      state: parsed.data.state || null,
-      country: parsed.data.country || "India",
-      locationId: location.id,
-    },
-  });
-
-  const report = await db.report.create({
-    data: {
-      userId: user.id,
-      waterBodyId: waterBody.id,
-      locationId: location.id,
-      title: parsed.data.title,
-      description: parsed.data.description,
-      waterBodyName: parsed.data.waterBodyName,
-      category: parsed.data.category as never,
-      userSeverity: parsed.data.userSeverity as never,
-      observedAt: new Date(parsed.data.observedAt),
-      aiRequestedAt: isGeminiConfigured() ? new Date() : null,
-      images: {
-        create: uploads,
+    const location = await db.location.create({
+      data: {
+        label: parsed.data.address || parsed.data.waterBodyName,
+        address: parsed.data.address || null,
+        locality: parsed.data.locality || null,
+        district: parsed.data.district || null,
+        state: parsed.data.state || null,
+        country: parsed.data.country || "India",
+        latitude: parsed.data.latitude,
+        longitude: parsed.data.longitude,
       },
-      statusHistory: {
-        create: {
-          toStatus: "NEW",
-          note: "Citizen report submitted from the web reporting flow.",
-          changedById: user.id,
+    });
+
+    const waterBodySlug = slugify(parsed.data.waterBodyName);
+
+    const waterBody = await db.waterBody.upsert({
+      where: { slug: waterBodySlug },
+      update: {
+        state: parsed.data.state || undefined,
+        city: parsed.data.locality || undefined,
+        country: parsed.data.country || "India",
+      },
+      create: {
+        name: parsed.data.waterBodyName,
+        slug: waterBodySlug,
+        type: "OTHER",
+        city: parsed.data.locality || null,
+        state: parsed.data.state || null,
+        country: parsed.data.country || "India",
+        locationId: location.id,
+      },
+    });
+
+    const report = await db.report.create({
+      data: {
+        userId: user.id,
+        waterBodyId: waterBody.id,
+        locationId: location.id,
+        title: parsed.data.title,
+        description: parsed.data.description,
+        waterBodyName: parsed.data.waterBodyName,
+        category: parsed.data.category as never,
+        userSeverity: parsed.data.userSeverity as never,
+        observedAt: new Date(parsed.data.observedAt),
+        aiRequestedAt: isGeminiConfigured() ? new Date() : null,
+        images: {
+          create: uploads,
+        },
+        statusHistory: {
+          create: {
+            toStatus: "NEW",
+            note: "Citizen report submitted from the web reporting flow.",
+            changedById: user.id,
+          },
         },
       },
-    },
-  });
-
-  const analysisId = isGeminiConfigured() ? await enqueueReportEnrichment(report.id) : null;
-  const reportUrl = `/reports/${report.id}`;
-
-  after(async () => {
-    await runQueuedReportTasks({
-      reportId: report.id,
-      reportUrl,
-      title: report.title,
-      waterBodyName: report.waterBodyName,
-      severity: report.userSeverity,
-      category: report.category,
-      analysisId,
     });
-  });
 
-  revalidateCorePaths();
+    const analysisId = isGeminiConfigured() ? await enqueueReportEnrichment(report.id) : null;
+    reportUrl = `/reports/${report.id}`;
+
+    after(async () => {
+      await runQueuedReportTasks({
+        reportId: report.id,
+        reportUrl,
+        title: report.title,
+        waterBodyName: report.waterBodyName,
+        severity: report.userSeverity,
+        category: report.category,
+        analysisId,
+      });
+    });
+
+    revalidateCorePaths();
+  } catch (error) {
+    console.error("Failed to create report", error);
+
+    return {
+      status: "error",
+      message:
+        "Could not submit the report right now. Check the required fields or try again in a moment.",
+    };
+  }
+
   redirect(reportUrl);
 }
 

@@ -36,7 +36,7 @@ EchoShare is designed to help communities:
 - Supabase Storage
 - NextAuth.js with Google OAuth
 - Leaflet + OpenStreetMap + `leaflet.heat`
-- Gemini 2.5 Flash via `@google/genai`
+- Gemini 2.5 Flash + Gemini embeddings via `@google/genai`
 
 ## Environment
 
@@ -45,18 +45,44 @@ Create a local `.env` from `.env.example`.
 Required:
 
 - `DATABASE_URL`
+- `DIRECT_URL`
 - `AUTH_SECRET`
+- `AUTH_GOOGLE_ID`
+- `AUTH_GOOGLE_SECRET`
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
 - `GEMINI_API_KEY`
-
-----
-
-Repository for BGS Advaya 2.0 24 Hour Hackathon.<br>
-=======
 Optional:
 
+- `SUPABASE_STORAGE_BUCKET`
+- `GEMINI_REPORT_MODEL`
+- `GEMINI_REVIEW_MODEL`
+- `GEMINI_EMBEDDING_MODEL`
+- `N8N_REPORT_CREATED_WEBHOOK_URL`
 - `N8N_HIGH_SEVERITY_WEBHOOK_URL`
 - `N8N_WEEKLY_DIGEST_WEBHOOK_URL`
 - `N8N_SHARED_SECRET`
+
+### Supabase + Prisma connection mode
+
+For Supabase-hosted Postgres, use transaction pooling for `DATABASE_URL` and the direct socket for `DIRECT_URL`.
+
+```env
+DATABASE_URL=postgresql://[DB_USER]:[PASSWORD]@db.[PROJECT_REF].supabase.co:6543/postgres?pgbouncer=true&connection_limit=1&connect_timeout=30&sslmode=require
+DIRECT_URL=postgresql://[DB_USER]:[PASSWORD]@db.[PROJECT_REF].supabase.co:5432/postgres?connect_timeout=30&sslmode=require
+```
+
+This is the runtime split that keeps Prisma stable in Vercel/serverless execution while preserving a direct connection for migrations.
+
+### AI model plan
+
+EchoShare does not need a custom-trained ML model for the hackathon build.
+
+- `gemini-2.5-flash` is the default report-analysis model for multimodal report enrichment.
+- `gemini-embedding-001` is used for duplicate-assist embeddings stored in `pgvector`.
+- `gemini-2.5-pro` is reserved as the heavier review model for future moderator escalation flows.
+
+All AI outputs remain clearly separated from raw user-submitted evidence.
 
 ## Google OAuth note
 
@@ -126,6 +152,7 @@ Demo-scoped:
 ## Docs
 
 - Architecture: [docs/architecture.md](./docs/architecture.md)
+- AI and automation: [docs/ai-automation.md](./docs/ai-automation.md)
 - n8n integration: [docs/n8n-integration.md](./docs/n8n-integration.md)
 
 

@@ -14,6 +14,22 @@ export function getGeminiApiKey() {
   return process.env.GEMINI_API_KEY ?? process.env.GOOGLE_API_KEY ?? null;
 }
 
+function readStringEnv(value: string | undefined, fallback: string) {
+  const trimmed = value?.trim();
+  return trimmed && trimmed.length > 0 ? trimmed : fallback;
+}
+
+export function getGeminiModelConfig() {
+  return {
+    reportAnalysisModel: readStringEnv(process.env.GEMINI_REPORT_MODEL, "gemini-2.5-flash"),
+    reviewModel: readStringEnv(process.env.GEMINI_REVIEW_MODEL, "gemini-2.5-pro"),
+    embeddingModel: readStringEnv(
+      process.env.GEMINI_EMBEDDING_MODEL,
+      "gemini-embedding-001",
+    ),
+  };
+}
+
 export function getAppBaseUrl() {
   if (process.env.NEXTAUTH_URL) {
     return process.env.NEXTAUTH_URL;

@@ -11,6 +11,14 @@ ECHOSHARE_BASE_URL=https://your-stable-echoshare-url.vercel.app
 ECHOSHARE_INTERNAL_SECRET=match-your-N8N_SHARED_SECRET
 ```
 
+## Live wiring checklist
+
+1. Deploy EchoShare to a stable Vercel URL.
+2. Set the app webhook env vars in Vercel.
+3. Set `ECHOSHARE_BASE_URL` and `ECHOSHARE_INTERNAL_SECRET` in n8n.
+4. Activate the n8n workflows only after both sides are configured.
+5. Test one real flow end-to-end: create report -> webhook -> internal AI route -> completed `ReportAIAnalysis`.
+
 ## Outbound app-to-n8n webhook
 
 ### Report-created orchestration
@@ -22,6 +30,8 @@ N8N_REPORT_CREATED_WEBHOOK_URL=https://your-n8n-instance/webhook/report-created
 ```
 
 Triggered after a report is saved and a pending AI analysis has been queued.
+
+EchoShare treats non-2xx webhook responses as failures, so the app can safely fall back to direct AI enrichment instead of silently assuming n8n accepted the job.
 
 If `N8N_SHARED_SECRET` is set, EchoShare also sends:
 

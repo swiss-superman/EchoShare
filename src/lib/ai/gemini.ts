@@ -1,9 +1,6 @@
 import { createPartFromBase64, createUserContent, GoogleGenAI } from "@google/genai";
-import { getGeminiApiKey } from "@/lib/env";
+import { getGeminiApiKey, getGeminiModelConfig } from "@/lib/env";
 import { dbOrThrow } from "@/lib/prisma";
-
-export const REPORT_ANALYSIS_MODEL = "gemini-2.5-flash";
-export const REPORT_EMBEDDING_MODEL = "gemini-embedding-001";
 
 const REPORT_EMBEDDING_DIMENSIONS = 768;
 const DUPLICATE_SEARCH_WINDOW_DAYS = 30;
@@ -185,8 +182,9 @@ function buildEmbeddingInput(report: {
 }
 
 async function generateReportEmbedding(input: string) {
+  const { embeddingModel } = getGeminiModelConfig();
   const response = await getGeminiClient().models.embedContent({
-    model: REPORT_EMBEDDING_MODEL,
+    model: embeddingModel,
     contents: [input],
     config: {
       outputDimensionality: REPORT_EMBEDDING_DIMENSIONS,
@@ -204,6 +202,7 @@ async function generateReportEmbedding(input: string) {
 
 async function upsertReportEmbedding(reportId: string, embedding: number[]) {
   const db = dbOrThrow();
+  const { embeddingModel } = getGeminiModelConfig();
 
   await db.$executeRawUnsafe(
     `
@@ -216,7 +215,7 @@ async function upsertReportEmbedding(reportId: string, embedding: number[]) {
         "updatedAt" = NOW()
     `,
     reportId,
-    REPORT_EMBEDDING_MODEL,
+    embeddingModel,
     toVectorLiteral(embedding),
   );
 }
@@ -264,12 +263,13 @@ async function findVectorDuplicateCandidates(input: {
 
 async function createPendingAnalysis(reportId: string) {
   const db = dbOrThrow();
+  const { reportAnalysisModel } = getGeminiModelConfig();
 
   const analysis = await db.reportAIAnalysis.create({
     data: {
       reportId,
       status: "PENDING",
-      modelName: REPORT_ANALYSIS_MODEL,
+      modelName: reportAnalysisModel,
     },
   });
 
@@ -303,6 +303,7 @@ export async function enqueueReportEnrichment(reportId: string) {
 
 export async function enrichReportById(reportId: string, analysisId?: string) {
   const db = dbOrThrow();
+  const { reportAnalysisModel } = getGeminiModelConfig();
   const report = await db.report.findUnique({
     where: { id: reportId },
     include: {
@@ -463,7 +464,7 @@ export async function enrichReportById(reportId: string, analysisId?: string) {
     }
 
     const response = await getGeminiClient().models.generateContent({
-      model: REPORT_ANALYSIS_MODEL,
+      model: reportAnalysisModel,
       contents: createUserContent(parts),
       config: {
         responseMimeType: "application/json",
@@ -481,7 +482,7 @@ export async function enrichReportById(reportId: string, analysisId?: string) {
       where: { id: targetAnalysisId },
       data: {
         status: "COMPLETED",
-        modelName: REPORT_ANALYSIS_MODEL,
+        modelName: reportAnalysisModel,
         summary: payload.summary ?? null,
         classification: normalizeCategory(payload.classification) as never,
         severityEstimate: normalizeSeverity(payload.severityEstimate) as never,
