@@ -1,5 +1,3 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
 # dependencies
 /node_modules
 /.pnp
@@ -12,37 +10,73 @@
 
 # testing
 /coverage
+*.lcov
 
-# next.js
+# next.js / build
 /.next/
 /out/
-
-# production
 /build
+/dist
 
-# misc
-.DS_Store
-*.pem
+# production / hosting / caches
+.vercel
+.firebase/
+/emulator-ui/
+*.cache
+.cache/
+.eslintcache
 
-# debug
+# debug / logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+*.log
+.next-dev*.log
 
-# env files (can opt-in for committing if needed)
+# local config / secrets
 .env*
 .env.example
 client_secret_*.json
-.next-dev*.log
+*.pem
+*.key
+certs/
+
+# editor / OS
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.iml
+
+# local assistant / workspace metadata
 AGENTS.md
 CLAUDE.md
 
-# vercel
-.vercel
+# firebase / functions
+/firebase-debug.log
+/firebase-debug.*.log
+.firebaserc
+/firebase.json
+/functions/node_modules/
+/functions/.env
+
+# docker / infra
+docker-compose.override.yml
+docker-compose.yml
+docker-images/
+.terraform/
+*.tfstate
+*.tfstate.backup
+.helm/
+
+# generated / local assets
+public/uploads/reports/*
+!public/uploads/reports/.gitkeep
+uploads/tmp/
+uploads/*.tmp
+public/assets/
 
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-public/uploads/reports/*
-!public/uploads/reports/.gitkeep
