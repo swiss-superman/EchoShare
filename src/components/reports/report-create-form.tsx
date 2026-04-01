@@ -1,7 +1,10 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
+import { useFormStatus } from "react-dom";
+import { createReportAction } from "@/app/actions/report-actions";
+import { initialReportCreateState } from "@/components/reports/report-create-form-state";
 import { pollutionCategories, severityLevels } from "@/lib/constants";
 import { formatCoordinate } from "@/lib/utils";
 
@@ -15,11 +18,26 @@ const LocationPicker = dynamic(
   },
 );
 
-type ReportCreateFormProps = {
-  action: (formData: FormData) => void;
-};
+function SubmitReportButton() {
+  const { pending } = useFormStatus();
 
-export function ReportCreateForm({ action }: ReportCreateFormProps) {
+  return (
+    <button
+      aria-disabled={pending}
+      className="w-full rounded-full bg-brand px-5 py-3 text-sm font-semibold text-white transition hover:bg-brand-strong disabled:cursor-not-allowed disabled:bg-brand/60"
+      disabled={pending}
+      type="submit"
+    >
+      {pending ? "Submitting report..." : "Submit report"}
+    </button>
+  );
+}
+
+export function ReportCreateForm() {
+  const [state, formAction] = useActionState(
+    createReportAction,
+    initialReportCreateState,
+  );
   const [coordinates, setCoordinates] = useState({
     latitude: 12.9716,
     longitude: 77.5946,
@@ -31,8 +49,22 @@ export function ReportCreateForm({ action }: ReportCreateFormProps) {
     [files],
   );
 
+  useEffect(
+    () => () => {
+      previews.forEach((preview) => URL.revokeObjectURL(preview.url));
+    },
+    [previews],
+  );
+
+  const titleError = state.fieldErrors?.title?.[0];
+  const waterBodyError = state.fieldErrors?.waterBodyName?.[0];
+  const observedAtError = state.fieldErrors?.observedAt?.[0];
+  const descriptionError = state.fieldErrors?.description?.[0];
+  const latitudeError = state.fieldErrors?.latitude?.[0];
+  const longitudeError = state.fieldErrors?.longitude?.[0];
+
   return (
-    <form action={action} className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
+    <form action={formAction} className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
       <section className="space-y-5 rounded-[1.8rem] border border-line bg-white/75 p-6">
         <div>
           <div className="section-kicker">Pollution reporting</div>
@@ -45,37 +77,57 @@ export function ReportCreateForm({ action }: ReportCreateFormProps) {
             classification.
           </p>
         </div>
+        {state.status === "error" && state.message ? (
+          <div
+            aria-live="polite"
+            className="rounded-[1.2rem] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900"
+          >
+            {state.message}
+          </div>
+        ) : null}
 
         <div className="grid gap-4 md:grid-cols-2">
           <label className="block space-y-2 text-sm font-medium md:col-span-2">
             <span>Title</span>
             <input
+              aria-invalid={Boolean(titleError)}
               className="w-full rounded-2xl border border-line bg-white px-4 py-3"
+              minLength={5}
               name="title"
               placeholder="Plastic waste piling up near the inlet"
               required
               type="text"
             />
+            {titleError ? <p className="text-xs text-rose-700">{titleError}</p> : null}
           </label>
           <label className="block space-y-2 text-sm font-medium">
             <span>Water body name</span>
             <input
+              aria-invalid={Boolean(waterBodyError)}
               className="w-full rounded-2xl border border-line bg-white px-4 py-3"
+              minLength={2}
               name="waterBodyName"
               placeholder="Ulsoor Lake south edge"
               required
               type="text"
             />
+            {waterBodyError ? (
+              <p className="text-xs text-rose-700">{waterBodyError}</p>
+            ) : null}
           </label>
           <label className="block space-y-2 text-sm font-medium">
             <span>Observed at</span>
             <input
+              aria-invalid={Boolean(observedAtError)}
               className="w-full rounded-2xl border border-line bg-white px-4 py-3"
               defaultValue={new Date().toISOString().slice(0, 16)}
               name="observedAt"
               required
               type="datetime-local"
             />
+            {observedAtError ? (
+              <p className="text-xs text-rose-700">{observedAtError}</p>
+            ) : null}
           </label>
           <label className="block space-y-2 text-sm font-medium">
             <span>Category</span>
@@ -108,11 +160,16 @@ export function ReportCreateForm({ action }: ReportCreateFormProps) {
           <label className="block space-y-2 text-sm font-medium md:col-span-2">
             <span>Description</span>
             <textarea
+              aria-invalid={Boolean(descriptionError)}
               className="min-h-[180px] w-full rounded-2xl border border-line bg-white px-4 py-3"
+              minLength={20}
               name="description"
               placeholder="Describe the visible waste, smell, water condition, nearby inflow, or immediate risk to the public and ecosystem."
               required
             />
+            {descriptionError ? (
+              <p className="text-xs text-rose-700">{descriptionError}</p>
+            ) : null}
           </label>
           <label className="block space-y-2 text-sm font-medium md:col-span-2">
             <span>Images</span>
@@ -165,6 +222,7 @@ export function ReportCreateForm({ action }: ReportCreateFormProps) {
             <label className="space-y-2 text-sm font-medium">
               <span>Latitude</span>
               <input
+                aria-invalid={Boolean(latitudeError)}
                 className="w-full rounded-2xl border border-line bg-white px-4 py-3"
                 name="latitude"
                 onChange={(event) =>
@@ -177,10 +235,14 @@ export function ReportCreateForm({ action }: ReportCreateFormProps) {
                 type="number"
                 value={formatCoordinate(coordinates.latitude)}
               />
+              {latitudeError ? (
+                <p className="text-xs text-rose-700">{latitudeError}</p>
+              ) : null}
             </label>
             <label className="space-y-2 text-sm font-medium">
               <span>Longitude</span>
               <input
+                aria-invalid={Boolean(longitudeError)}
                 className="w-full rounded-2xl border border-line bg-white px-4 py-3"
                 name="longitude"
                 onChange={(event) =>
@@ -193,6 +255,9 @@ export function ReportCreateForm({ action }: ReportCreateFormProps) {
                 type="number"
                 value={formatCoordinate(coordinates.longitude)}
               />
+              {longitudeError ? (
+                <p className="text-xs text-rose-700">{longitudeError}</p>
+              ) : null}
             </label>
           </div>
           <button
@@ -262,12 +327,7 @@ export function ReportCreateForm({ action }: ReportCreateFormProps) {
               type="text"
             />
           </label>
-          <button
-            className="w-full rounded-full bg-brand px-5 py-3 text-sm font-semibold text-white transition hover:bg-brand-strong"
-            type="submit"
-          >
-            Submit report
-          </button>
+          <SubmitReportButton />
         </section>
       </aside>
     </form>

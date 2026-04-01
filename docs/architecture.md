@@ -8,8 +8,8 @@ EchoShare is a coded web application first and an automation-enhanced system sec
 - Auth: Google OAuth via `next-auth` and Prisma adapter
 - Source of truth: PostgreSQL through Prisma ORM
 - Maps: Leaflet + OpenStreetMap tiles + `leaflet.heat`
-- AI: Gemini 2.5 Flash + Gemini embeddings via `@google/genai`
-- Automation: n8n only for background alerts, digests, and optional queued enrichment
+- AI: Gemini 2.5 Flash for multimodal enrichment, Gemini embeddings for duplicate assist, Gemini 2.5 Pro reserved for future review escalation
+- Automation: n8n only for background alerts, digests, and queued enrichment/retry flows
 
 ## Architecture decisions
 
@@ -32,6 +32,10 @@ EchoShare is a coded web application first and an automation-enhanced system sec
 6. n8n stays at the edge
    The app works without n8n.
    n8n only augments the platform through outbound webhooks, retries, digests, and secure internal routes.
+
+7. Supabase-hosted runtime uses pooled Prisma traffic
+   `DATABASE_URL` uses Supabase transaction mode on port `6543` with `pgbouncer=true&connection_limit=1`.
+   `DIRECT_URL` stays on the direct `5432` socket for Prisma migrations and schema pushes.
 
 ## Folder structure
 
@@ -98,14 +102,14 @@ docs/
 Real implementation:
 
 - Google web auth flow
-- PostgreSQL schema and typed ORM
+- Supabase-hosted PostgreSQL schema and typed Prisma ORM
+- Supabase Storage-backed image uploads
 - Report creation, list, detail, and map pages
 - Community feed, cleanup event creation, directory, dashboard
-- Gemini enrichment service and stored AI metadata
+- Gemini enrichment service, embeddings, and stored AI metadata
 - n8n-ready webhook + secure internal API integration points
 
 Demo-scoped choices:
 
-- Local filesystem image storage under `public/uploads/reports`
 - Development seed data in `prisma/seed.ts`
 - Seed organizations and water bodies clearly labeled as development seed data

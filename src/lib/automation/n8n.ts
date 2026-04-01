@@ -23,14 +23,21 @@ type HighSeverityPayload = {
 async function postWebhook(url: string, payload: unknown) {
   const sharedSecret = getN8nWebhookConfig().sharedSecret;
 
-  await fetch(url, {
+  const response = await fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       ...(sharedSecret ? { "x-echoshare-secret": sharedSecret } : {}),
     },
     body: JSON.stringify(payload),
+    cache: "no-store",
   });
+
+  if (!response.ok) {
+    const details = await response.text().catch(() => "");
+    const suffix = details ? `: ${details.slice(0, 240)}` : "";
+    throw new Error(`n8n webhook failed with ${response.status}${suffix}`);
+  }
 }
 
 export async function emitReportCreatedWebhook(payload: ReportCreatedPayload) {

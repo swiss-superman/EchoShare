@@ -1,4 +1,3 @@
-import { createReportAction } from "@/app/actions/report-actions";
 import { ReportCreateForm } from "@/components/reports/report-create-form";
 import { requireUser } from "@/lib/session";
 
@@ -20,7 +19,7 @@ export default async function NewReportPage() {
           labeled as assistance.
         </p>
       </header>
-      <ReportCreateForm action={createReportAction} />
+      <ReportCreateForm />
     </section>
   );
 }
