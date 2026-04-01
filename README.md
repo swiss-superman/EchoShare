@@ -81,4 +81,19 @@ Database:
 
 -----
 
-Repository for BGS 24 Hour Hackathon.<br>
+# Project Checklist
+- [x] Requirement Analysis.
+- [x] Basic Workflow and Webpage design requirement analysis.
+- [ ] Mid hackathon presentation.
+- [ ] Login page configuration.
+- [ ] User authentication & email verification
+- [ ] Frontend responsive & accessible
+- [ ] Reporting & photo storage working
+- [ ] Secrets management configured (env vars / vault)
+- [ ] Static assets CDN configuration.
+- [ ] Error pages and 404 handling implemented
+- [ ] Documentation
+
+----
+
+Repository for BGS Advaya 2.0 24 Hour Hackathon.<br>
