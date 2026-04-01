@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Session } from "next-auth";
 import { AuthCta } from "@/components/layout/auth-cta";
-import { hasGoogleAuthConfig } from "@/lib/google-credentials";
+import { isGoogleAuthReady } from "@/lib/google-credentials";
 
 const navigation = [
   { href: "/reports", label: "Reports" },
@@ -54,7 +54,7 @@ export async function SiteHeader({ sessionPromise }: SiteHeaderProps) {
             </div>
           ) : null}
           <AuthCta
-            authConfigured={hasGoogleAuthConfig()}
+            authConfigured={isGoogleAuthReady()}
             isSignedIn={Boolean(session?.user)}
           />
         </div>

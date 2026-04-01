@@ -2,7 +2,10 @@ import type { NextAuthOptions } from "next-auth";
 import NextAuth, { getServerSession } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
-import { getGoogleClientCredentials } from "@/lib/google-credentials";
+import {
+  getGoogleClientCredentials,
+  isGoogleAuthReady,
+} from "@/lib/google-credentials";
 import { getDb } from "@/lib/prisma";
 import { slugify } from "@/lib/utils";
 
@@ -13,18 +16,18 @@ function buildHandle(name: string | null | undefined, email: string | null | und
 
 const db = getDb();
 const googleCredentials = getGoogleClientCredentials();
-const googleConfigured = Boolean(googleCredentials);
+const googleAuthReady = isGoogleAuthReady();
 
 export const authOptions: NextAuthOptions = {
-  adapter: db ? PrismaAdapter(db) : undefined,
+  adapter: db && googleAuthReady ? PrismaAdapter(db) : undefined,
   secret: process.env.AUTH_SECRET,
   session: {
-    strategy: db ? "database" : "jwt",
+    strategy: db && googleAuthReady ? "database" : "jwt",
   },
   pages: {
     signIn: "/auth/signin",
   },
-  providers: googleConfigured
+  providers: googleAuthReady
     ? [
         GoogleProvider({
           clientId: googleCredentials?.clientId ?? "",
@@ -78,10 +81,21 @@ export const authOptions: NextAuthOptions = {
   },
 };
 
-const handler = NextAuth(authOptions);
+const handler = googleAuthReady
+  ? NextAuth(authOptions)
+  : async function disabledAuthHandler() {
+      return Response.json(
+        { error: "Google authentication is not configured for this deployment." },
+        { status: 503 },
+      );
+    };
 
 export { handler as GET, handler as POST };
 
 export async function auth() {
+  if (!googleAuthReady) {
+    return null;
+  }
+
   return getServerSession(authOptions);
 }
