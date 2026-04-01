@@ -12,7 +12,7 @@ import {
   TileLayer,
   useMap,
 } from "react-leaflet";
-import type { MapMarker } from "@/lib/data/queries";
+import type { MapMarker } from "@/lib/data/signal-types";
 
 type ReportMapClientProps = {
   markers: MapMarker[];
@@ -34,18 +34,7 @@ function HeatLayer({ markers }: { markers: MapMarker[] }) {
       return;
     }
 
-    const points = markers.map((marker) => {
-      const weight =
-        marker.severity === "CRITICAL"
-          ? 1
-          : marker.severity === "HIGH"
-            ? 0.8
-            : marker.severity === "MEDIUM"
-              ? 0.55
-              : 0.3;
-
-      return [marker.latitude, marker.longitude, weight] as [number, number, number];
-    });
+    const points = markers.map((marker) => [marker.latitude, marker.longitude, marker.heatWeight] as [number, number, number]);
 
     const layer = (L as typeof L & {
       heatLayer: (
@@ -145,13 +134,24 @@ export function ReportMapClient({
   focus,
   heightClassName = "h-[560px]",
 }: ReportMapClientProps) {
-  const icon = useMemo(
-    () =>
-      L.divIcon({
+  const icons = useMemo(
+    () => ({
+      USER_REPORT: L.divIcon({
         className: "",
         html: `<div style="width:16px;height:16px;border-radius:999px;background:#0d2732;border:3px solid #8ee3de;box-shadow:0 0 0 6px rgba(18,99,111,0.16)"></div>`,
         iconAnchor: [8, 8],
       }),
+      MUNICIPAL_DATASET: L.divIcon({
+        className: "",
+        html: `<div style="width:16px;height:16px;border-radius:999px;background:#6d3a15;border:3px solid #ffd29a;box-shadow:0 0 0 6px rgba(196,124,56,0.18)"></div>`,
+        iconAnchor: [8, 8],
+      }),
+      WATER_QUALITY_DATASET: L.divIcon({
+        className: "",
+        html: `<div style="width:16px;height:16px;border-radius:999px;background:#153b70;border:3px solid #96ccff;box-shadow:0 0 0 6px rgba(54,118,188,0.16)"></div>`,
+        iconAnchor: [8, 8],
+      }),
+    }),
     [],
   );
 
@@ -193,24 +193,32 @@ export function ReportMapClient({
         {markers.map((marker) => (
           <Marker
             key={marker.id}
-            icon={icon}
+            icon={icons[marker.source]}
             position={[marker.latitude, marker.longitude]}
           >
             <Popup>
               <div className="space-y-2">
                 <div className="text-xs uppercase tracking-[0.16em] text-slate-500">
-                  {marker.waterBodyName}
+                  {marker.sourceLabel}
                 </div>
                 <div className="font-semibold">{marker.title}</div>
+                <div className="text-sm text-slate-500">{marker.waterBodyName}</div>
                 <div className="text-sm text-slate-600">
                   {marker.summary ?? "No AI summary yet."}
                 </div>
-                <a
-                  className="text-sm font-semibold text-teal-700"
-                  href={`/reports/${marker.id}`}
-                >
-                  Open report
-                </a>
+                {marker.metricLabel ? (
+                  <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-slate-700">
+                    {marker.metricLabel}
+                  </div>
+                ) : null}
+                {marker.href ? (
+                  <a
+                    className="text-sm font-semibold text-teal-700"
+                    href={marker.href}
+                  >
+                    Open report
+                  </a>
+                ) : null}
               </div>
             </Popup>
           </Marker>

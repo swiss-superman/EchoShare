@@ -29,11 +29,14 @@ EchoShare is a coded web application first and an automation-enhanced system sec
 5. Maps stay fully free
    The map stack uses OpenStreetMap raster tiles and Leaflet in the browser. Heatmap rendering is calculated client-side from persisted report coordinates and severity.
 
-6. n8n stays at the edge
+6. Trust gates run before persistence
+   EchoShare rejects obviously unrelated image uploads with Gemini triage and rejects coordinates that are not near a real mapped water body using free OpenStreetMap validation. These checks happen before the report is saved.
+
+7. n8n stays at the edge
    The app works without n8n.
    n8n only augments the platform through outbound webhooks, retries, digests, and secure internal routes.
 
-7. Supabase-hosted runtime uses pooled Prisma traffic
+8. Supabase-hosted runtime uses pooled Prisma traffic
    `DATABASE_URL` uses Supabase transaction mode on port `6543` with `pgbouncer=true&connection_limit=5`.
    `DIRECT_URL` stays on the direct `5432` socket for Prisma migrations and schema pushes.
 

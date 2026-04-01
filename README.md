@@ -56,8 +56,12 @@ Optional:
 
 - `SUPABASE_STORAGE_BUCKET`
 - `GEMINI_REPORT_MODEL`
+- `GEMINI_IMAGE_TRIAGE_MODEL`
 - `GEMINI_REVIEW_MODEL`
 - `GEMINI_EMBEDDING_MODEL`
+- `NOMINATIM_BASE_URL`
+- `OVERPASS_API_URL`
+- `NOMINATIM_EMAIL`
 - `N8N_REPORT_CREATED_WEBHOOK_URL`
 - `N8N_HIGH_SEVERITY_WEBHOOK_URL`
 - `N8N_WEEKLY_DIGEST_WEBHOOK_URL`
@@ -83,6 +87,15 @@ EchoShare does not need a custom-trained ML model for the hackathon build.
 - `gemini-2.5-pro` is reserved as the heavier review model for future moderator escalation flows.
 
 All AI outputs remain clearly separated from raw user-submitted evidence.
+
+### Evidence and location trust gates
+
+EchoShare uses two validation layers before a report is accepted:
+
+- Gemini image triage rejects obviously unrelated uploads such as selfies, weapons, memes, screenshots, and non-evidence scenes.
+- Free OpenStreetMap services validate that the submitted pin is actually near a mapped water body and can reject clear water-body name mismatches.
+
+This keeps obviously bad evidence out of the report pipeline without requiring a paid maps API.
 
 ## Google OAuth note
 

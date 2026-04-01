@@ -6,6 +6,7 @@ import { isGoogleAuthReady } from "@/lib/google-credentials";
 const navigation = [
   { href: "/reports", label: "Reports" },
   { href: "/map", label: "Map" },
+  { href: "/signals", label: "Signals" },
   { href: "/community", label: "Community" },
   { href: "/directory", label: "Directory" },
   { href: "/dashboard", label: "Dashboard" },

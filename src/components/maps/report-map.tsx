@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import type { MapMarker } from "@/lib/data/queries";
+import type { MapMarker } from "@/lib/data/signal-types";
 
 type ReportMapProps = {
   markers: MapMarker[];

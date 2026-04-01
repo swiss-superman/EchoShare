@@ -14,15 +14,12 @@ import { formatNumber, toTitleCase } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-const fallbackHeroImage =
+const heroBackgroundImage =
   "https://images.unsplash.com/photo-1473773508845-188df298d2d1?auto=format&fit=crop&w=1800&q=80";
 
 export default async function Home() {
   const data = await getHomePageData();
   const leadHotspot = data.topWaterBodies[0] ?? null;
-  const heroImageUrl =
-    data.recentReports.find((report) => report.primaryImageUrl)?.primaryImageUrl ??
-    fallbackHeroImage;
   const hasSeedData =
     data.recentReports.some((report) => report.isDevelopmentSeed) ||
     Boolean(data.latestPost?.isDevelopmentSeed) ||
@@ -105,7 +102,7 @@ export default async function Home() {
           aria-hidden="true"
           className="absolute inset-0 h-full w-full object-cover"
           fetchPriority="high"
-          src={heroImageUrl}
+          src={heroBackgroundImage}
         />
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(246,242,234,0.92)_0%,rgba(246,242,234,0.84)_30%,rgba(246,242,234,0.48)_56%,rgba(246,242,234,0.08)_100%)]" />
         <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.18)_0%,rgba(255,255,255,0.02)_34%,rgba(11,24,34,0.18)_100%)]" />
