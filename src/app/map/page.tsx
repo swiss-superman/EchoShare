@@ -1,6 +1,5 @@
 import { ReportMap } from "@/components/maps/report-map";
 import { ReportFilterForm } from "@/components/reports/report-filter-form";
-import { EmptyState } from "@/components/ui/empty-state";
 import { getMapData, normalizeReportFilters } from "@/lib/data/queries";
 
 export const dynamic = "force-dynamic";
@@ -33,15 +32,16 @@ export default async function MapPage({ searchParams }: MapPageProps) {
             weights denser and more severe submissions more heavily so volunteers
             can see where immediate cleanup or escalation might matter most.
           </p>
+          {data.markers.length === 0 ? (
+            <p className="mt-4 rounded-[1rem] border border-dashed border-line-strong bg-white/70 px-4 py-3 text-sm leading-7 text-muted">
+              This deployment does not have report data yet, so the map is
+              showing the base geography only. Connect the production
+              PostgreSQL database or submit the first report to populate live
+              markers and hotspot density.
+            </p>
+          ) : null}
         </header>
-        {data.markers.length === 0 ? (
-          <EmptyState
-            detail="No map markers match the current filter set yet."
-            title="No markers to render"
-          />
-        ) : (
-          <ReportMap markers={data.markers} />
-        )}
+        <ReportMap markers={data.markers} />
       </div>
     </section>
   );
