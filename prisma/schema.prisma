@@ -1,0 +1,488 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  USER
+  MODERATOR
+  ADMIN
+}
+
+enum WaterBodyType {
+  LAKE
+  POND
+  BEACH
+  RIVER
+  CANAL
+  WETLAND
+  RESERVOIR
+  ESTUARY
+  OTHER
+}
+
+enum PollutionCategory {
+  PLASTIC
+  SOLID_WASTE
+  SEWAGE
+  CHEMICAL
+  OIL_OR_FUEL
+  CONSTRUCTION_DEBRIS
+  FOAM
+  DEAD_FISH
+  INVASIVE_WEEDS
+  MULTIPLE
+  OTHER
+}
+
+enum SeverityLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum ReportStatus {
+  NEW
+  UNDER_REVIEW
+  VERIFIED
+  ACTION_PLANNED
+  CLEANUP_SCHEDULED
+  RESOLVED
+  REJECTED
+}
+
+enum PostType {
+  GENERAL
+  CLEANUP_CALL
+  UPDATE
+  ALERT
+}
+
+enum PostStatus {
+  PUBLISHED
+  ARCHIVED
+  HIDDEN
+}
+
+enum OrganizationType {
+  NGO
+  GOVERNMENT
+  COMMUNITY_GROUP
+  ACADEMIC
+  CSR
+  VOLUNTEER_NETWORK
+}
+
+enum VerificationStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+}
+
+enum CleanupEventStatus {
+  PLANNED
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum ParticipationStatus {
+  GOING
+  CHECKED_IN
+  COMPLETED
+  NO_SHOW
+  CANCELLED
+}
+
+enum NotificationType {
+  REPORT_STATUS
+  REPORT_AI_READY
+  CLEANUP_REMINDER
+  CLEANUP_UPDATE
+  DIGEST
+  SYSTEM
+}
+
+enum AiAnalysisStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  NEEDS_REVIEW
+}
+
+enum ModerationTargetType {
+  REPORT
+  POST
+  COMMENT
+  CLEANUP_EVENT
+  ORGANIZATION
+}
+
+enum ModerationStatus {
+  OPEN
+  REVIEWED
+  DISMISSED
+  ACTIONED
+}
+
+model User {
+  id                String             @id @default(cuid())
+  name              String?
+  email             String?            @unique
+  emailVerified     DateTime?
+  image             String?
+  role              UserRole           @default(USER)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  accounts          Account[]
+  sessions          Session[]
+  profile           Profile?
+  reports           Report[]
+  posts             Post[]
+  comments          Comment[]
+  organizedEvents   CleanupEvent[]     @relation("OrganizerCleanupEvents")
+  participants      Participant[]
+  notifications     Notification[]
+  statusHistory     StatusHistory[]    @relation("StatusChangedBy")
+  moderationRecords ModerationRecord[] @relation("ModerationCreatedBy")
+}
+
+model Profile {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  handle             String   @unique
+  displayName        String?
+  bio                String?  @db.Text
+  city               String?
+  state              String?
+  country            String?
+  preferredRadiusKm  Int      @default(10)
+  onboardingComplete Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Location {
+  id            String        @id @default(cuid())
+  label         String?
+  address       String?
+  locality      String?
+  district      String?
+  state         String?
+  country       String?
+  latitude      Float
+  longitude     Float
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  reports       Report[]
+  waterBodies   WaterBody[]
+  posts         Post[]
+  organizations Organization[]
+  cleanupEvents CleanupEvent[]
+
+  @@index([latitude, longitude])
+  @@index([state, locality])
+}
+
+model WaterBody {
+  id                String          @id @default(cuid())
+  name              String
+  slug              String          @unique
+  type              WaterBodyType
+  description       String?         @db.Text
+  watershed         String?
+  city              String?
+  state             String?
+  country           String?
+  locationId        String?
+  isDevelopmentSeed Boolean         @default(false)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  location          Location?       @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  reports           Report[]
+  posts             Post[]
+  organizations     Organization[]
+  cleanupEvents     CleanupEvent[]
+
+  @@index([type, state])
+  @@index([city, state])
+}
+
+model Report {
+  id                String             @id @default(cuid())
+  userId            String
+  waterBodyId       String?
+  locationId        String
+  title             String
+  description       String             @db.Text
+  waterBodyName     String
+  category          PollutionCategory
+  userSeverity      SeverityLevel
+  status            ReportStatus       @default(NEW)
+  observedAt        DateTime
+  aiRequestedAt     DateTime?
+  aiCompletedAt     DateTime?
+  isDevelopmentSeed Boolean            @default(false)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  waterBody         WaterBody?         @relation(fields: [waterBodyId], references: [id], onDelete: SetNull)
+  location          Location           @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  images            ReportImage[]
+  aiAnalyses        ReportAIAnalysis[]
+  statusHistory     StatusHistory[]
+  moderationRecords ModerationRecord[]
+
+  @@index([category, userSeverity, status])
+  @@index([waterBodyId, observedAt])
+  @@index([locationId, observedAt])
+  @@index([createdAt])
+}
+
+model ReportImage {
+  id         String   @id @default(cuid())
+  reportId   String
+  storageKey String
+  publicUrl  String
+  mimeType   String
+  sizeBytes  Int
+  caption    String?
+  isPrimary  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  report     Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@index([reportId])
+}
+
+model ReportAIAnalysis {
+  id                   String           @id @default(cuid())
+  reportId             String
+  status               AiAnalysisStatus @default(PENDING)
+  modelName            String
+  summary              String?          @db.Text
+  classification       PollutionCategory?
+  severityEstimate     SeverityLevel?
+  wasteTypes           Json?
+  possibleDuplicateIds Json?
+  duplicateReasoning   String?          @db.Text
+  actionRecommendation String?          @db.Text
+  explanation          Json?
+  moderationSuggestion Json?
+  rawResponse          Json?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+  report               Report           @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@index([reportId, createdAt])
+  @@index([status, createdAt])
+}
+
+model Post {
+  id                String             @id @default(cuid())
+  authorId          String
+  waterBodyId       String?
+  locationId        String?
+  title             String
+  body              String             @db.Text
+  type              PostType
+  status            PostStatus         @default(PUBLISHED)
+  scheduledFor      DateTime?
+  isDevelopmentSeed Boolean            @default(false)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  author            User               @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  waterBody         WaterBody?         @relation(fields: [waterBodyId], references: [id], onDelete: SetNull)
+  location          Location?          @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  comments          Comment[]
+  cleanupEvent      CleanupEvent?
+  moderationRecords ModerationRecord[]
+
+  @@index([type, createdAt])
+  @@index([waterBodyId, createdAt])
+}
+
+model Comment {
+  id                String             @id @default(cuid())
+  postId            String
+  authorId          String
+  parentId          String?
+  body              String             @db.Text
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  post              Post               @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author            User               @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parent            Comment?           @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies           Comment[]          @relation("CommentReplies")
+  moderationRecords ModerationRecord[]
+
+  @@index([postId, createdAt])
+  @@index([authorId, createdAt])
+}
+
+model Organization {
+  id                String             @id @default(cuid())
+  name              String
+  slug              String             @unique
+  type              OrganizationType
+  description       String?            @db.Text
+  areaServed        String
+  verification      VerificationStatus @default(UNVERIFIED)
+  contactName       String?
+  email             String?
+  phone             String?
+  website           String?
+  locationId        String?
+  waterBodyId       String?
+  tags              Json?
+  isDevelopmentSeed Boolean            @default(false)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  location          Location?          @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  waterBody         WaterBody?         @relation(fields: [waterBodyId], references: [id], onDelete: SetNull)
+  moderationRecords ModerationRecord[]
+
+  @@index([type, verification])
+  @@index([areaServed])
+}
+
+model CleanupEvent {
+  id                String             @id @default(cuid())
+  organizerId       String
+  waterBodyId       String
+  locationId        String
+  title             String
+  description       String             @db.Text
+  scheduledAt       DateTime
+  endsAt            DateTime?
+  maxParticipants   Int?
+  status            CleanupEventStatus @default(PLANNED)
+  postId            String?            @unique
+  isDevelopmentSeed Boolean            @default(false)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  organizer         User               @relation("OrganizerCleanupEvents", fields: [organizerId], references: [id], onDelete: Cascade)
+  waterBody         WaterBody          @relation(fields: [waterBodyId], references: [id], onDelete: Restrict)
+  location          Location           @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  post              Post?              @relation(fields: [postId], references: [id], onDelete: SetNull)
+  participants      Participant[]
+  statusHistory     StatusHistory[]
+  moderationRecords ModerationRecord[]
+
+  @@index([waterBodyId, scheduledAt])
+  @@index([status, scheduledAt])
+}
+
+model Participant {
+  id             String              @id @default(cuid())
+  cleanupEventId String
+  userId         String
+  status         ParticipationStatus @default(GOING)
+  note           String?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  cleanupEvent   CleanupEvent        @relation(fields: [cleanupEventId], references: [id], onDelete: Cascade)
+  user           User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([cleanupEventId, userId])
+  @@index([userId, status])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  body      String           @db.Text
+  linkUrl   String?
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model StatusHistory {
+  id             String        @id @default(cuid())
+  reportId       String?
+  cleanupEventId String?
+  fromStatus     String?
+  toStatus       String
+  note           String?       @db.Text
+  changedById    String?
+  createdAt      DateTime      @default(now())
+  report         Report?       @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  cleanupEvent   CleanupEvent? @relation(fields: [cleanupEventId], references: [id], onDelete: Cascade)
+  changedBy      User?         @relation("StatusChangedBy", fields: [changedById], references: [id], onDelete: SetNull)
+
+  @@index([reportId, createdAt])
+  @@index([cleanupEventId, createdAt])
+}
+
+model ModerationRecord {
+  id             String               @id @default(cuid())
+  targetType     ModerationTargetType
+  status         ModerationStatus     @default(OPEN)
+  reason         String
+  detail         String?              @db.Text
+  reportId       String?
+  postId         String?
+  commentId      String?
+  cleanupEventId String?
+  organizationId String?
+  createdById    String?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  report         Report?              @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  post           Post?                @relation(fields: [postId], references: [id], onDelete: Cascade)
+  comment        Comment?             @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  cleanupEvent   CleanupEvent?        @relation(fields: [cleanupEventId], references: [id], onDelete: Cascade)
+  organization   Organization?        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy      User?                @relation("ModerationCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([targetType, status, createdAt])
+}
+
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String? @db.Text
+  access_token       String? @db.Text
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String? @db.Text
+  session_state      String?
+  oauth_token_secret String? @db.Text
+  oauth_token        String? @db.Text
+  user               User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
