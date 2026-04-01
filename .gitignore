@@ -26,3 +26,66 @@ yarn-error.log*
 
 # Environment files (local configs)
 /.env.*
+
+
+# Node
+node_modules/
+pnpm-lock.yaml
+package-lock.json
+
+# TypeScript
+dist/
+build/
+*.tsbuildinfo
+
+# Editor
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Debug
+.cache/
+.eslintcache
+
+# Vite / React
+*.local
+.cache
+public/assets/
+
+# Tests / Coverage
+coverage/
+*.lcov
+
+# Docker
+docker-compose.override.yml
+/Dockerfile.
+**/.dockerfile
+docker-compose.yml
+docker-images/
+
+# Kubernetes / Terraform / Infrastructure
+.terraform/
+*.tfstate
+*.tfstate.backup
+.helm/
+
+# IDE-specific
+*.iml
+
+# Build artifacts
+/client/dist/
+/server/dist/
+/worker/dist/
+
+# Certificates
+certs/
+*.pem
+*.key
+
+uploads/tmp/
+uploads/*.tmp
