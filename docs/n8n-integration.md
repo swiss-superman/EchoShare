@@ -2,7 +2,53 @@
 
 EchoShare does not depend on n8n for core logic. n8n is used only as a background enhancement layer.
 
+## n8n environment variables
+
+Set these in your n8n cloud workspace before activating the workflows:
+
+```env
+ECHOSHARE_BASE_URL=https://your-stable-echoshare-url.vercel.app
+ECHOSHARE_INTERNAL_SECRET=match-your-N8N_SHARED_SECRET
+```
+
 ## Outbound app-to-n8n webhook
+
+### Report-created orchestration
+
+Environment variable:
+
+```env
+N8N_REPORT_CREATED_WEBHOOK_URL=https://your-n8n-instance/webhook/report-created
+```
+
+Triggered after a report is saved and a pending AI analysis has been queued.
+
+If `N8N_SHARED_SECRET` is set, EchoShare also sends:
+
+```http
+x-echoshare-secret: <N8N_SHARED_SECRET>
+```
+
+Payload:
+
+```json
+{
+  "appBaseUrl": "https://your-app.vercel.app",
+  "reportId": "clx...",
+  "title": "Overflowing plastic waste near the east steps",
+  "waterBodyName": "Ulsoor Lake",
+  "severity": "MEDIUM",
+  "category": "PLASTIC",
+  "reportUrl": "/reports/clx...",
+  "aiRequested": true
+}
+```
+
+Suggested workflow:
+
+1. Receive webhook in n8n
+2. Immediately call `POST /api/internal/ai/reports/:id`
+3. If enrichment fails, keep the analysis ID for scheduled retry
 
 ### High-severity alert
 
@@ -45,7 +91,21 @@ x-internal-secret: <N8N_SHARED_SECRET>
 
 `POST /api/internal/ai/reports/:id`
 
+Optional body:
+
+```json
+{
+  "analysisId": "clx..."
+}
+```
+
 Use this if you want n8n to queue or retry Gemini enrichment asynchronously.
+
+### List pending or failed AI jobs
+
+`GET /api/internal/ai/reports?status=PENDING&limit=20`
+
+Use this in a scheduled n8n retry workflow to fetch stuck or failed analyses.
 
 ### Fetch full high-severity payload
 
@@ -74,4 +134,4 @@ Returns summary metrics, participation count, and top water bodies for scheduled
    Cron trigger in n8n calls the digest endpoint and formats email content for organizers or admin reviewers.
 
 3. Deferred AI retry
-   If Gemini fails during inline enrichment, n8n can retry by calling the internal AI route on a schedule or queue.
+   Schedule trigger fetches `GET /api/internal/ai/reports?status=FAILED`, then loops through `POST /api/internal/ai/reports/:id`.

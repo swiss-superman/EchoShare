@@ -21,9 +21,10 @@ export async function POST(
   }
 
   const { id } = await params;
+  const body = (await request.json().catch(() => ({}))) as { analysisId?: string };
 
   try {
-    const analysis = await enrichReportById(id);
+    const analysis = await enrichReportById(id, body.analysisId);
     return NextResponse.json({ ok: true, analysisId: analysis.id });
   } catch (error) {
     return NextResponse.json(

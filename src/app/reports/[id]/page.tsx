@@ -86,11 +86,11 @@ export default async function ReportDetailPage({
                 className="rounded-full border border-line-strong px-4 py-2 text-sm font-semibold transition hover:bg-white"
                 type="submit"
               >
-                Run enrichment
+                Queue enrichment
               </button>
             </form>
           </div>
-          {latestAnalysis ? (
+          {latestAnalysis?.status === "COMPLETED" ? (
             <div className="grid gap-4 md:grid-cols-2">
               <div className="rounded-[1.5rem] border border-line bg-[#f8f3ea] p-5">
                 <p className="text-xs uppercase tracking-[0.18em] text-muted">
@@ -134,9 +134,19 @@ export default async function ReportDetailPage({
                 ) : null}
               </div>
             </div>
+          ) : latestAnalysis?.status === "PENDING" ? (
+            <EmptyState
+              detail="EchoShare has queued AI enrichment for this report. Refresh shortly or let n8n retry it in the background."
+              title="AI analysis running"
+            />
+          ) : latestAnalysis?.status === "FAILED" ? (
+            <EmptyState
+              detail="The last AI attempt failed. Queue enrichment again after checking Gemini config or automation retries."
+              title="AI analysis failed"
+            />
           ) : (
             <EmptyState
-              detail="No AI analysis has been stored for this report yet. Run enrichment manually or configure Gemini and background automation."
+              detail="No AI analysis has been queued for this report yet. Queue enrichment manually or configure Gemini and background automation."
               title="AI analysis pending"
             />
           )}
