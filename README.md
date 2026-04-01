@@ -68,7 +68,7 @@ Optional:
 For Supabase-hosted Postgres, use transaction pooling for `DATABASE_URL` and the direct socket for `DIRECT_URL`.
 
 ```env
-DATABASE_URL=postgresql://[DB_USER]:[PASSWORD]@db.[PROJECT_REF].supabase.co:6543/postgres?pgbouncer=true&connection_limit=1&connect_timeout=30&sslmode=require
+DATABASE_URL=postgresql://[DB_USER]:[PASSWORD]@db.[PROJECT_REF].supabase.co:6543/postgres?pgbouncer=true&connection_limit=5&connect_timeout=30&sslmode=require
 DIRECT_URL=postgresql://[DB_USER]:[PASSWORD]@db.[PROJECT_REF].supabase.co:5432/postgres?connect_timeout=30&sslmode=require
 ```
 

@@ -34,7 +34,7 @@ EchoShare is a coded web application first and an automation-enhanced system sec
    n8n only augments the platform through outbound webhooks, retries, digests, and secure internal routes.
 
 7. Supabase-hosted runtime uses pooled Prisma traffic
-   `DATABASE_URL` uses Supabase transaction mode on port `6543` with `pgbouncer=true&connection_limit=1`.
+   `DATABASE_URL` uses Supabase transaction mode on port `6543` with `pgbouncer=true&connection_limit=5`.
    `DIRECT_URL` stays on the direct `5432` socket for Prisma migrations and schema pushes.
 
 ## Folder structure
