@@ -11,13 +11,13 @@ Create a community based social networking like web app designed for individuals
 ----
 
 # Requirements
-
-1. Community driven app - Individuals post geotagged photos of litter around water bodies. <br>
-2. The intensity of litter around a given water body is shown using heatmap on a google map. <br>
-3. Users can login with Google SSO or Apple SSO for best authentication. <br>
-4. Users can find information about NGOs, Government organizations and individuals who can work for the cause. <br>
-5. Users can put any generic post organizing a group effort on a specific water body.<br>
-
+<pre>
+    1. Community driven app - Individuals post geotagged photos of litter around water bodies. <br>
+    2. The intensity of litter around a given water body is shown using heatmap on a google map. <br>
+    3. Users can login with Google SSO or Apple SSO for best authentication. <br>
+    4. Users can find information about NGOs, Government organizations and individuals who can work for the cause. <br>
+    5. Users can put any generic post organizing a group effort on a specific water body.<br>
+</pre>
 ----
 
 # Flow
@@ -59,23 +59,25 @@ Create a community based social networking like web app designed for individuals
 
 # Tech Stack
 
+<pre>
 Frontend:
-    1.<br>
-    2.<br>
-    3.<br>
+    1. Nextjs
+    2. Tailwind
+    3. HTML
 
 Backend:
-    1.<br>
-    2.<br>
-    3.<br>
+    1.
+    2.
+    3.
 
 Authentication:
-    1.<br>
-    2.<br>
+    1.
+    2.
 
 Database:
-    1.<br>
-    2.<br>
+    1. Mongodb
+    2.
+</pre>
 
 -----
 
