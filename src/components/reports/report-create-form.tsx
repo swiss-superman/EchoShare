@@ -181,6 +181,10 @@ export function ReportCreateForm() {
               onChange={(event) => setFiles(Array.from(event.target.files ?? []))}
               type="file"
             />
+            <p className="text-xs leading-6 text-muted">
+              Upload only real evidence tied to water-body waste or cleanup. Selfies, people-only
+              photos, weapons, memes, or unrelated scenes are rejected before submission.
+            </p>
           </label>
           {previews.length > 0 ? (
             <div className="grid gap-3 md:col-span-2 md:grid-cols-3">
@@ -210,7 +214,8 @@ export function ReportCreateForm() {
             </h3>
             <p className="mt-2 text-sm leading-7 text-muted">
               Click the map to mark the report. You can also use the browser’s
-              current location and fine-tune manually.
+              current location and fine-tune manually. Pins that are clearly not
+              near a real mapped water body are rejected before submission.
             </p>
           </div>
           <LocationPicker

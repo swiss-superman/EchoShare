@@ -44,9 +44,9 @@ export default function RootLayout({
       className={`${displayFont.variable} ${bodyFont.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full">
-        <div className="mx-auto flex min-h-screen w-full max-w-[1600px] flex-col px-4 py-4 sm:px-6 lg:px-8">
+        <div className="mx-auto flex min-h-screen w-full max-w-[1600px] min-w-0 flex-col overflow-x-clip px-4 py-4 sm:px-6 lg:px-8">
           <SiteHeader sessionPromise={sessionPromise} />
-          <main className="flex-1 py-6">{children}</main>
+          <main className="min-w-0 flex-1 py-6">{children}</main>
         </div>
       </body>
     </html>

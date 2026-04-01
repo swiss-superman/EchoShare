@@ -14,15 +14,12 @@ import { formatNumber, toTitleCase } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-const fallbackHeroImage =
+const heroBackgroundImage =
   "https://images.unsplash.com/photo-1473773508845-188df298d2d1?auto=format&fit=crop&w=1800&q=80";
 
 export default async function Home() {
   const data = await getHomePageData();
   const leadHotspot = data.topWaterBodies[0] ?? null;
-  const heroImageUrl =
-    data.recentReports.find((report) => report.primaryImageUrl)?.primaryImageUrl ??
-    fallbackHeroImage;
   const hasSeedData =
     data.recentReports.some((report) => report.isDevelopmentSeed) ||
     Boolean(data.latestPost?.isDevelopmentSeed) ||
@@ -105,7 +102,7 @@ export default async function Home() {
           aria-hidden="true"
           className="absolute inset-0 h-full w-full object-cover"
           fetchPriority="high"
-          src={heroImageUrl}
+          src={heroBackgroundImage}
         />
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(246,242,234,0.92)_0%,rgba(246,242,234,0.84)_30%,rgba(246,242,234,0.48)_56%,rgba(246,242,234,0.08)_100%)]" />
         <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.18)_0%,rgba(255,255,255,0.02)_34%,rgba(11,24,34,0.18)_100%)]" />
@@ -245,8 +242,8 @@ export default async function Home() {
         </div>
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[1.08fr_0.92fr]">
-        <div className="shell-frame rounded-[2.2rem] p-6 sm:p-8">
+      <section className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1.08fr)_minmax(0,0.92fr)]">
+        <div className="shell-frame min-w-0 rounded-[2.2rem] p-6 sm:p-8">
           <div className="section-kicker">How It Works</div>
           <h2 className="mt-3 font-display text-4xl font-semibold tracking-[-0.055em] text-[#102430]">
             Built for real civic coordination, not just map pins
@@ -274,7 +271,7 @@ export default async function Home() {
           </div>
         </div>
 
-        <div className="shell-frame rounded-[2.2rem] p-6 sm:p-8">
+        <div className="shell-frame min-w-0 rounded-[2.2rem] p-6 sm:p-8">
           <div className="section-kicker">Network Snapshot</div>
           <h2 className="mt-3 font-display text-4xl font-semibold tracking-[-0.055em] text-[#102430]">
             What EchoShare is surfacing right now

@@ -6,6 +6,7 @@ import { after } from "next/server";
 import {
   enqueueReportEnrichment,
   enrichReportById,
+  validateReportEvidenceUpload,
 } from "@/lib/ai/gemini";
 import {
   emitHighSeverityReportWebhook,
@@ -16,6 +17,7 @@ import { dbOrThrow } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { saveReportImages } from "@/lib/upload";
 import { slugify } from "@/lib/utils";
+import { validateReportLocation } from "@/lib/validation/location";
 import { reportSchema } from "@/lib/validators";
 import type { ReportCreateActionState } from "@/components/reports/report-create-form-state";
 
@@ -96,8 +98,46 @@ export async function createReportAction(
   let reportUrl: string;
 
   try {
+    const locationValidation = await validateReportLocation({
+      latitude: parsed.data.latitude,
+      longitude: parsed.data.longitude,
+      waterBodyName: parsed.data.waterBodyName,
+      locality: parsed.data.locality,
+      state: parsed.data.state,
+      country: parsed.data.country,
+    });
+
+    if (locationValidation.status === "rejected") {
+      return {
+        status: "error",
+        message:
+          locationValidation.message ??
+          "The selected pin could not be validated against a nearby water body.",
+      };
+    }
+
+    const uploadedFiles = formData
+      .getAll("images")
+      .filter((value): value is File => value instanceof File);
+
+    const preflightEvidenceValidation = await validateReportEvidenceUpload({
+      title: parsed.data.title,
+      description: parsed.data.description,
+      waterBodyName: parsed.data.waterBodyName,
+      category: parsed.data.category,
+      userSeverity: parsed.data.userSeverity,
+      files: uploadedFiles,
+    });
+
+    if (preflightEvidenceValidation.status === "rejected") {
+      return {
+        status: "error",
+        message: preflightEvidenceValidation.message,
+      };
+    }
+
     const uploads = await saveReportImages(
-      formData.getAll("images").filter((value): value is File => value instanceof File),
+      uploadedFiles,
     );
 
     const location = await db.location.create({

@@ -4,8 +4,10 @@
 
 EchoShare uses a real AI pipeline, but it does not require a custom-trained model for the hackathon build.
 
-- `gemini-2.5-flash`
-  Used for multimodal report enrichment from report text plus up to three uploaded images.
+- `gemini-2.5-flash-lite`
+  Used for multimodal report enrichment from report text plus up to two candidate images after relevance triage. This is the default for the hackathon build because it keeps cost and quota pressure lower while still supporting multimodal analysis.
+- `gemini-2.5-flash-lite`
+  Used first for image relevance triage so unrelated or fake evidence does not enter the main pollution analysis.
 - `gemini-embedding-001`
   Used to create report embeddings for duplicate-assist and nearby semantic clustering.
 - `gemini-2.5-pro`
@@ -14,7 +16,8 @@ EchoShare uses a real AI pipeline, but it does not require a custom-trained mode
 The app can override those model choices through environment variables:
 
 ```env
-GEMINI_REPORT_MODEL=gemini-2.5-flash
+GEMINI_REPORT_MODEL=gemini-2.5-flash-lite
+GEMINI_IMAGE_TRIAGE_MODEL=gemini-2.5-flash-lite
 GEMINI_REVIEW_MODEL=gemini-2.5-pro
 GEMINI_EMBEDDING_MODEL=gemini-embedding-001
 ```
@@ -34,10 +37,13 @@ That gives a real working AI layer with less operational risk.
 ## Real AI flow
 
 1. A citizen submits a pollution report.
-2. EchoShare stores raw report data, coordinates, and image URLs.
-3. The app queues a pending `ReportAIAnalysis` row.
-4. A background task or n8n workflow calls the secure internal enrichment route.
-5. Gemini returns structured JSON for:
+2. EchoShare first validates that the report pin is near a real mapped water body using free OpenStreetMap services.
+3. EchoShare then triages uploaded images and rejects obviously unrelated evidence before saving the report.
+4. EchoShare stores raw report data, coordinates, and image URLs.
+5. The app queues a pending `ReportAIAnalysis` row.
+6. A background task or n8n workflow calls the secure internal enrichment route.
+7. Gemini first decides which uploaded images are actually relevant evidence.
+8. Gemini returns structured JSON for:
    - summary
    - pollution classification
    - severity estimate
@@ -45,8 +51,8 @@ That gives a real working AI layer with less operational risk.
    - duplicate hints
    - action recommendation
    - moderation notes
-6. EchoShare stores that output separately from the original report.
-7. The user and moderators can see that the result is AI-assisted, not source truth.
+9. EchoShare stores that output separately from the original report and also stores whether the AI used text only or text plus verified images.
+10. The user and moderators can see that the result is AI-assisted, not source truth.
 
 ## Duplicate-assist strategy
 

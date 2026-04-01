@@ -42,6 +42,7 @@
 
 html {
   scroll-behavior: smooth;
+  overflow-x: clip;
 }
 
 body {
@@ -49,6 +50,7 @@ body {
   color: var(--foreground);
   font-family: var(--font-instrument-sans), sans-serif;
   min-height: 100vh;
+  overflow-x: clip;
   background-image:
     radial-gradient(circle at top left, rgba(18, 99, 111, 0.12), transparent 34%),
     radial-gradient(circle at top right, rgba(202, 123, 50, 0.12), transparent 28%),

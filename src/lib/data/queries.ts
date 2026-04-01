@@ -6,6 +6,8 @@ import type {
   ReportStatus,
   SeverityLevel,
 } from "@prisma/client";
+import { getDatasetSignals } from "@/lib/data/datasets";
+import type { MapMarker, PriorityBoardEntry } from "@/lib/data/signal-types";
 import { getDb } from "@/lib/prisma";
 
 type SearchParamValue = string | string[] | undefined;
@@ -59,20 +61,9 @@ export type HomePageCleanupSnapshot = {
   isDevelopmentSeed: boolean;
 };
 
-export type MapMarker = {
-  id: string;
-  title: string;
-  waterBodyName: string;
-  category: PollutionCategory;
-  severity: SeverityLevel;
-  status: ReportStatus;
-  observedAt: string;
-  latitude: number;
-  longitude: number;
-  summary: string | null;
-  primaryImageUrl: string | null;
-  isDevelopmentSeed: boolean;
-};
+const numberFormatter = new Intl.NumberFormat("en-IN", {
+  maximumFractionDigits: 0,
+});
 
 export function normalizeReportFilters(searchParams: SearchParamsInput): ReportFilters {
   const firstValue = (value: SearchParamValue) =>
@@ -106,9 +97,13 @@ function toObservedAfter(timeWindow: string | undefined) {
 
 function buildReportWhere(filters: ReportFilters): Prisma.ReportWhereInput {
   return {
+    status: filters.status
+      ? (filters.status as ReportStatus)
+      : {
+          not: "REJECTED" satisfies ReportStatus,
+        },
     category: filters.category ? (filters.category as PollutionCategory) : undefined,
     userSeverity: filters.severity ? (filters.severity as SeverityLevel) : undefined,
-    status: filters.status ? (filters.status as ReportStatus) : undefined,
     waterBodyId: filters.waterBodyId || undefined,
     observedAt: toObservedAfter(filters.timeWindow)
       ? { gte: toObservedAfter(filters.timeWindow) }
@@ -147,6 +142,114 @@ function toReportCard(
   };
 }
 
+function severityToHeatWeight(severity: SeverityLevel) {
+  if (severity === "CRITICAL") {
+    return 1;
+  }
+
+  if (severity === "HIGH") {
+    return 0.8;
+  }
+
+  if (severity === "MEDIUM") {
+    return 0.55;
+  }
+
+  return 0.3;
+}
+
+function buildReportMarkers(reports: ReportCardData[]): MapMarker[] {
+  return reports.map((report) => ({
+    id: report.id,
+    source: "USER_REPORT",
+    sourceLabel: "Citizen report",
+    title: report.title,
+    waterBodyName: report.waterBodyName,
+    category: report.category,
+    severity: report.severity,
+    status: report.status,
+    observedAt: report.observedAt,
+    latitude: report.latitude,
+    longitude: report.longitude,
+    summary: report.aiSummary,
+    primaryImageUrl: report.primaryImageUrl,
+    isDevelopmentSeed: report.isDevelopmentSeed,
+    heatWeight: severityToHeatWeight(report.severity),
+    metricLabel: null,
+    href: `/reports/${report.id}`,
+  }));
+}
+
+function buildReportPriorityBoard(reports: ReportCardData[]): PriorityBoardEntry[] {
+  const grouped = Array.from(
+    reports.reduce((accumulator, report) => {
+      const key = `${report.waterBodyName}::${report.locality ?? ""}`;
+      const current =
+        accumulator.get(key) ??
+        {
+          waterBodyName: report.waterBodyName,
+          locationLabel: [report.locality, report.state].filter(Boolean).join(", "),
+          reportCount: 0,
+          severityWeight: 0,
+        };
+
+      current.reportCount += 1;
+      current.severityWeight +=
+        report.severity === "CRITICAL"
+          ? 4
+          : report.severity === "HIGH"
+            ? 3
+            : report.severity === "MEDIUM"
+              ? 2
+              : 1;
+
+      accumulator.set(key, current);
+      return accumulator;
+    }, new Map<string, { waterBodyName: string; locationLabel: string; reportCount: number; severityWeight: number }>()),
+  );
+
+  if (grouped.length === 0) {
+    return [];
+  }
+
+  const withRawScores = grouped.map(([key, entry]) => ({
+    id: `report-hotspot-${key.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+    ...entry,
+    rawScore: entry.reportCount * 16 + entry.severityWeight * 12,
+  }));
+  const highestRawScore = Math.max(...withRawScores.map((entry) => entry.rawScore), 1);
+
+  return withRawScores
+    .map((entry) => {
+      const priorityIndex = Math.max(
+        14,
+        Math.round((entry.rawScore / highestRawScore) * 100),
+      );
+      const severity: SeverityLevel =
+        priorityIndex >= 80
+          ? "CRITICAL"
+          : priorityIndex >= 62
+            ? "HIGH"
+            : priorityIndex >= 40
+              ? "MEDIUM"
+              : "LOW";
+
+      return {
+        id: entry.id,
+        source: "USER_REPORT" as const,
+        sourceLabel: "Citizen reports",
+        title: entry.waterBodyName,
+        locationLabel: entry.locationLabel || "Community-submitted location",
+        summary: `${entry.reportCount} field reports are clustering here, increasing the need for cleanup coordination or escalation.`,
+        priorityIndex,
+        metricLabel: `${numberFormatter.format(entry.reportCount)} reports`,
+        severity,
+        href: "/reports",
+      };
+    })
+    .sort((left, right) => right.priorityIndex - left.priorityIndex);
+}
+
 export async function getHomePageData() {
   const db = getDb();
 
@@ -173,7 +276,6 @@ export async function getHomePageData() {
   }
 
   return db.$transaction(async (tx) => {
-    const totalReports = await tx.report.count();
     const openReports = await tx.report.count({
       where: {
         status: {
@@ -183,8 +285,48 @@ export async function getHomePageData() {
     });
     const resolvedReports = await tx.report.count({
       where: {
-        status: "RESOLVED",
+        status: {
+          equals: "RESOLVED",
+        },
       },
+    });
+    const visibleReportWhere: Prisma.ReportWhereInput = {
+      status: {
+        not: "REJECTED",
+      },
+    };
+    const totalVisibleReports = await tx.report.count({
+      where: visibleReportWhere,
+    });
+    const recentReports = await tx.report.findMany({
+      where: visibleReportWhere,
+      orderBy: { observedAt: "desc" },
+      take: 4,
+      include: {
+        location: true,
+        images: true,
+        aiAnalyses: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+        },
+      },
+    });
+    const grouped = await tx.report.groupBy({
+      by: ["waterBodyName"],
+      where: {
+        status: {
+          not: "REJECTED",
+        },
+      },
+      _count: {
+        _all: true,
+      },
+      orderBy: {
+        _count: {
+          waterBodyName: "desc",
+        },
+      },
+      take: 4,
     });
     const organizations = await tx.organization.count();
     const verifiedOrganizations = await tx.organization.count({
@@ -220,31 +362,8 @@ export async function getHomePageData() {
         status: "COMPLETED",
       },
     });
-    const recentReports = await tx.report.findMany({
-      orderBy: { observedAt: "desc" },
-      take: 4,
-      include: {
-        location: true,
-        images: true,
-        aiAnalyses: {
-          orderBy: { createdAt: "desc" },
-          take: 1,
-        },
-      },
-    });
-    const grouped = await tx.report.groupBy({
-      by: ["waterBodyName"],
-      _count: {
-        _all: true,
-      },
-      orderBy: {
-        _count: {
-          waterBodyName: "desc",
-        },
-      },
-      take: 4,
-    });
     const activeWaterBodies = await tx.report.findMany({
+      where: visibleReportWhere,
       distinct: ["waterBodyName"],
       select: {
         waterBodyName: true,
@@ -287,7 +406,7 @@ export async function getHomePageData() {
 
     return {
       metrics: {
-        totalReports,
+        totalReports: totalVisibleReports,
         openReports,
         resolvedReports,
         organizations,
@@ -374,26 +493,71 @@ export async function getReportListData(filters: ReportFilters) {
 }
 
 export async function getMapData(filters: ReportFilters) {
-  const data = await getReportListData(filters);
-
-  const markers: MapMarker[] = data.reports.map((report) => ({
-    id: report.id,
-    title: report.title,
-    waterBodyName: report.waterBodyName,
-    category: report.category,
-    severity: report.severity,
-    status: report.status,
-    observedAt: report.observedAt,
-    latitude: report.latitude,
-    longitude: report.longitude,
-    summary: report.aiSummary,
-    primaryImageUrl: report.primaryImageUrl,
-    isDevelopmentSeed: report.isDevelopmentSeed,
-  }));
+  const [data, datasets] = await Promise.all([
+    getReportListData(filters),
+    getDatasetSignals(),
+  ]);
+  const reportMarkers = buildReportMarkers(data.reports);
+  const markers: MapMarker[] = [...reportMarkers, ...datasets.waste.markers];
 
   return {
     ...data,
     markers,
+    reportMarkerCount: reportMarkers.length,
+    datasetMarkerCount: datasets.waste.markers.length,
+  };
+}
+
+export async function getSignalsPageData(filters: ReportFilters) {
+  const [mapData, datasets] = await Promise.all([
+    getMapData(filters),
+    getDatasetSignals(),
+  ]);
+
+  const datasetBoard: PriorityBoardEntry[] = datasets.waste.hotspots
+    .slice(0, 6)
+    .map((hotspot) => ({
+      id: hotspot.id,
+      source: "MUNICIPAL_DATASET",
+      sourceLabel: "Municipal waste dataset",
+      title: hotspot.city,
+      locationLabel: hotspot.landfillName,
+      summary: hotspot.summary,
+      priorityIndex: hotspot.priorityIndex,
+      metricLabel: `${numberFormatter.format(hotspot.totalWasteTonsPerDay)} tons/day`,
+      severity: hotspot.severity,
+      href: null,
+    }));
+
+  const waterQualityBoard: PriorityBoardEntry[] = datasets.waterQuality.feeds.map((feed) => ({
+    id: feed.id,
+    source: "WATER_QUALITY_DATASET",
+    sourceLabel: "Water-quality monitoring",
+    title: feed.label,
+    locationLabel: "Historical monitoring stream",
+    summary: `${Math.round(feed.poorShare * 100)}% of the monitoring samples were Poor or Very Poor across the recorded period.`,
+    priorityIndex: feed.priorityIndex,
+    metricLabel: `${feed.latestStatus} · WQI ${feed.latestWqi.toFixed(1)}`,
+    severity: feed.severity,
+    href: null,
+  }));
+
+  const priorityBoard = [
+    ...buildReportPriorityBoard(mapData.reports),
+    ...datasetBoard,
+    ...waterQualityBoard,
+  ]
+    .sort((left, right) => right.priorityIndex - left.priorityIndex)
+    .slice(0, 10);
+
+  return {
+    ...mapData,
+    priorityBoard,
+    wasteDatasetYear: datasets.waste.latestYear,
+    wasteDatasetTotal: datasets.waste.totalWasteTonsPerDay,
+    dominantWasteTypes: datasets.waste.dominantWasteTypes,
+    wasteHotspots: datasets.waste.hotspots,
+    waterQualityFeeds: datasets.waterQuality.feeds,
   };
 }
 
@@ -542,9 +706,19 @@ export async function getDashboardData() {
   }
 
   return db.$transaction(async (tx) => {
-    const totalReports = await tx.report.count();
-    const resolvedReports = await tx.report.count({ where: { status: "RESOLVED" } });
+    const visibleReportWhere: Prisma.ReportWhereInput = {
+      status: {
+        not: "REJECTED",
+      },
+    };
+    const totalReports = await tx.report.count({ where: visibleReportWhere });
+    const resolvedReports = await tx.report.count({
+      where: {
+        status: "RESOLVED",
+      },
+    });
     const activeWaterBodies = await tx.report.findMany({
+      where: visibleReportWhere,
       distinct: ["waterBodyName"],
       select: {
         waterBodyName: true,
@@ -559,6 +733,7 @@ export async function getDashboardData() {
     });
     const topWaterBodies = await tx.report.groupBy({
       by: ["waterBodyName"],
+      where: visibleReportWhere,
       _count: {
         _all: true,
       },
@@ -570,6 +745,7 @@ export async function getDashboardData() {
       take: 5,
     });
     const recentReports = await tx.report.findMany({
+      where: visibleReportWhere,
       orderBy: { observedAt: "desc" },
       take: 5,
       include: {

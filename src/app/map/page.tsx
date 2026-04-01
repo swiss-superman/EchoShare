@@ -13,24 +13,25 @@ export default async function MapPage({ searchParams }: MapPageProps) {
   const data = await getMapData(filters);
 
   return (
-    <section className="grid gap-6 lg:grid-cols-[300px_1fr]">
-      <aside>
+    <section className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
+      <aside className="space-y-4">
         <ReportFilterForm
           filters={data.filters}
           resetHref="/map"
           waterBodies={data.waterBodies}
         />
       </aside>
-      <div className="space-y-5">
+      <div className="min-w-0 space-y-5">
         <header className="shell-frame rounded-[1.8rem] px-6 py-6">
           <div className="section-kicker">Map intelligence</div>
           <h1 className="mt-3 font-display text-4xl font-semibold tracking-[-0.04em]">
             Hotspots, density, and field context
           </h1>
           <p className="mt-3 max-w-3xl text-sm leading-7 text-muted">
-            Marker clusters reveal where reports are coming from. The heat layer
-            weights denser and more severe submissions more heavily so volunteers
-            can see where immediate cleanup or escalation might matter most.
+            The heat layer now blends citizen reports with mapped municipal
+            waste-pressure hotspots from your dataset. Filters still refine the
+            report layer, while the amber dataset overlay keeps long-range waste
+            burden visible for context.
           </p>
           {data.markers.length === 0 ? (
             <p className="mt-4 rounded-[1rem] border border-dashed border-line-strong bg-white/70 px-4 py-3 text-sm leading-7 text-muted">
@@ -39,7 +40,16 @@ export default async function MapPage({ searchParams }: MapPageProps) {
               PostgreSQL database or submit the first report to populate live
               markers and hotspot density.
             </p>
-          ) : null}
+          ) : (
+            <p className="mt-4 rounded-[1rem] border border-line bg-white/72 px-4 py-3 text-sm leading-7 text-muted">
+              Showing {data.reportMarkerCount} citizen report markers and{" "}
+              {data.datasetMarkerCount} dataset hotspots. Open{" "}
+              <a className="font-semibold text-[#0b5061]" href="/signals">
+                Signals
+              </a>{" "}
+              for the ranked intelligence board and water-quality feeds.
+            </p>
+          )}
         </header>
         <ReportMap markers={data.markers} />
       </div>

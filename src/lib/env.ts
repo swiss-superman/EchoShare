@@ -19,13 +19,25 @@ function readStringEnv(value: string | undefined, fallback: string) {
   return trimmed && trimmed.length > 0 ? trimmed : fallback;
 }
 
+const DEFAULT_GEMINI_REPORT_MODEL = "gemini-2.5-flash-lite";
+const DEFAULT_GEMINI_IMAGE_TRIAGE_MODEL = "gemini-2.5-flash-lite";
+const DEFAULT_GEMINI_REVIEW_MODEL = "gemini-2.5-pro";
+const DEFAULT_GEMINI_EMBEDDING_MODEL = "gemini-embedding-001";
+
 export function getGeminiModelConfig() {
   return {
-    reportAnalysisModel: readStringEnv(process.env.GEMINI_REPORT_MODEL, "gemini-2.5-flash"),
-    reviewModel: readStringEnv(process.env.GEMINI_REVIEW_MODEL, "gemini-2.5-pro"),
+    reportAnalysisModel: readStringEnv(
+      process.env.GEMINI_REPORT_MODEL,
+      DEFAULT_GEMINI_REPORT_MODEL,
+    ),
+    imageTriageModel: readStringEnv(
+      process.env.GEMINI_IMAGE_TRIAGE_MODEL,
+      DEFAULT_GEMINI_IMAGE_TRIAGE_MODEL,
+    ),
+    reviewModel: readStringEnv(process.env.GEMINI_REVIEW_MODEL, DEFAULT_GEMINI_REVIEW_MODEL),
     embeddingModel: readStringEnv(
       process.env.GEMINI_EMBEDDING_MODEL,
-      "gemini-embedding-001",
+      DEFAULT_GEMINI_EMBEDDING_MODEL,
     ),
   };
 }
@@ -65,5 +77,19 @@ export function getN8nWebhookConfig() {
     highSeverity: process.env.N8N_HIGH_SEVERITY_WEBHOOK_URL ?? null,
     weeklyDigest: process.env.N8N_WEEKLY_DIGEST_WEBHOOK_URL ?? null,
     sharedSecret: process.env.N8N_SHARED_SECRET ?? null,
+  };
+}
+
+export function getOpenMapValidationConfig() {
+  return {
+    nominatimUrl: readStringEnv(
+      process.env.NOMINATIM_BASE_URL,
+      "https://nominatim.openstreetmap.org",
+    ),
+    overpassUrl: readStringEnv(
+      process.env.OVERPASS_API_URL,
+      "https://overpass-api.de/api/interpreter",
+    ),
+    contactEmail: process.env.NOMINATIM_EMAIL?.trim() || null,
   };
 }
