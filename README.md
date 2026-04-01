@@ -1,85 +1,134 @@
 # EchoShare
-A community based web app designed for individuals to post, organize, contact and work to tackle the problem of pollution near water bodies.<br>
 
-**Problem Statement**: Create a technology driven solution to tackle pollution, biodiversity loss, and resource overuse in marine ecosystem.
+EchoShare is a community-driven sustainability web app for reporting pollution near water bodies and turning those reports into visible local action.
 
-----
+This repository started from the hackathon concept of tackling pollution, biodiversity loss, and resource overuse in marine and freshwater ecosystems. The current codebase implements that idea as a full-stack Next.js MVP with Google auth, PostgreSQL, map-based reporting, community coordination, stakeholder discovery, AI-assisted enrichment, and n8n integration points.
 
-# Idea
-Create a community based social networking like web app designed for individuals to post, organize and work to tackle the problem of pollution near water bodies(beaches, ponds etc).<br>
+## Problem framing
 
-----
+People regularly see litter, discharge, and waste buildup near lakes, rivers, canals, ponds, beaches, and wetlands, but the reporting path is fragmented and local coordination is weak.
 
-# Requirements
-<pre>
-    1. Community driven app - Individuals post geotagged photos of litter around water bodies. <br>
-    2. The intensity of litter around a given water body is shown using heatmap on a google map. <br>
-    3. Users can login with Google SSO or Apple SSO for best authentication. <br>
-    4. Users can find information about NGOs, Government organizations and individuals who can work for the cause. <br>
-    5. Users can put any generic post organizing a group effort on a specific water body.<br>
-</pre>
-----
+EchoShare is designed to help communities:
 
-# Flow
-<pre>
-    1. User logs into the service with their google or apple account.<br>
-    2. User tries to post images of litter around the source of their choice.<br>
-    3. Evalution of the image to check if it actually is related to litter around a source or just some random image.<br>
-    4. Rate limiting to avoid spam posts.<br>
-    5. Image is posted successfully with some information like litter type, geolocation and severity given by the user.<br>
-    6. Backend updates the map with updated heatmap according to user posts.<br>
-    7. The user can then further look for NGOs, Government Orgs and individuals around them within a separate section in the website.<br>
-</pre>
-----
+- post geo-tagged pollution evidence
+- visualize hotspots on a free interactive map
+- coordinate cleanup activity
+- discover NGOs and public stakeholders
+- keep AI outputs separate from raw user evidence
 
-# Webpage
-1. Once the user is authenticated, they are shown their homepage.<br>
-2. A users homepage has the following:<br>
-    <pre>
-    i. Left end.<br>
-        a. Has information on the NGOs, Government organizations in the location of their choice.<br>
-        b. When hovered, they show information about the organization.(a hyperlink to the orgs website).<br>
-        c. On toggling the right end moves away only showing the contents in the middle and the right half.<br>
-    ii. Middle part.<br>
-        a. Their post history in the middle.<br>
-        b. This section is dynamically loaded based on the post information for every user in the database.<br>
-        c. Every post contains username, content of the post, text following the post, date and time of the post and reactions to the post.<br>
-    iii. Right end.<br>
-        a. Contains the heatmap.<br>
-        b. Heatmap represents the litter density based on frequency of appearance in the post.<br>
-        c. The heatmap updates automatically when a user posts.<br>
-        d. The heat is calculated based on a formula based on parameters in the backend.<br>
-    iv. Top right corner.<br>
-        a. Profile icon.<br>
-        b. Allow the users to view their username and other credentials.<br>
-        c. A section to view all the upcoming events they have enlisted to volunteer for.<br>
-    </pre>
+## What the app includes
+
+- Geo-tagged pollution reporting with photo uploads
+- Free interactive map with markers and hotspot rendering
+- Google login for contributors
+- Community posts and cleanup coordination
+- Stakeholder directory
+- Gemini-powered AI enrichment stored separately from user evidence
+- n8n integration points for alerts and digests without moving core product logic into automation
+
+## Stack
+
+- Next.js 16 App Router
+- React 19
+- Tailwind CSS 4
+- PostgreSQL
+- Prisma 6.19
+- NextAuth.js with Google OAuth
+- Leaflet + OpenStreetMap + `leaflet.heat`
+- Gemini 2.5 Flash via `@google/genai`
+
+## Environment
+
+Create a local `.env` from `.env.example`.
+
+Required:
+
+- `DATABASE_URL`
+- `AUTH_SECRET`
+- `GEMINI_API_KEY`
 
 ----
 
-# Tech Stack
+Repository for BGS Advaya 2.0 24 Hour Hackathon.<br>
+=======
+Optional:
 
-<pre>
-Frontend:
-    1. Nextjs
-    2. Tailwind
-    3. HTML
+- `N8N_HIGH_SEVERITY_WEBHOOK_URL`
+- `N8N_WEEKLY_DIGEST_WEBHOOK_URL`
+- `N8N_SHARED_SECRET`
 
-Backend:
-    1.
-    2.
-    3.
+## Google OAuth note
 
-Authentication:
-    1.
-    2.
+For local development, the app can fall back to a `client_secret_*.json` file in the project root when `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET` are not set.
 
-Database:
-    1. Mongodb
-    2.
-</pre>
+Do not commit local `.env` files or Google OAuth client secret JSON files to a public repository.
 
------
+You still need the exact Auth.js callback URI registered in Google Cloud:
+
+`http://localhost:8080/api/auth/callback/google`
+
+The existing origin `http://localhost:8080` alone is not enough.
+
+## Local setup
+
+```bash
+npm install
+npm run prisma:generate
+npx prisma migrate dev --name init
+npm run prisma:seed
+npm run dev
+```
+
+The app runs on:
+
+`http://localhost:8080`
+
+## Verification commands
+
+```bash
+npm run typecheck
+npm run lint
+npm run build
+```
+
+## Data model highlights
+
+- `Report` stores citizen-submitted evidence metadata
+- `ReportImage` stores uploaded image references
+- `ReportAIAnalysis` stores AI-assisted summary, classification, duplicate hints, and recommendations
+- `CleanupEvent` and `Participant` manage turnout
+- `Organization` keeps a verification-ready stakeholder directory
+- `StatusHistory` and `ModerationRecord` support future admin workflows
+
+## Real vs demo
+
+Real:
+
+- Auth flow
+- Route structure and protected pages
+- PostgreSQL schema
+- Typed Prisma queries
+- Report CRUD flow
+- Map rendering
+- Community feed and cleanup events
+- Stakeholder directory
+- Dashboard metrics
+- Gemini enrichment service
+- n8n integration endpoints
+
+Demo-scoped:
+
+- Local filesystem image storage under `public/uploads/reports`
+- Development seed data in `prisma/seed.ts`
+- Seed organizations and water bodies clearly labeled as development seed data
+
+## Docs
+
+- Architecture: [docs/architecture.md](./docs/architecture.md)
+- n8n integration: [docs/n8n-integration.md](./docs/n8n-integration.md)
+
+
+-----------
 
 # Project Checklist
 - [x] Requirement Analysis.
@@ -94,6 +143,4 @@ Database:
 - [ ] Error pages and 404 handling implemented
 - [ ] Documentation
 
-----
 
-Repository for BGS Advaya 2.0 24 Hour Hackathon.<br>

@@ -1,91 +1,82 @@
-# Firebase build and deployment files
-/firebase-debug.log
-/firebase-debug.*.log
-.firebaserc
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
 
-# Firebase Hosting
-/firebase.json
-*.cache
-hosting/.cache
+# testing
+/coverage
+*.lcov
 
-# Firebase Functions
-/functions/node_modules/
-/functions/.env
-/functions/package-lock.json
+# next.js / build
+/.next/
+/out/
+/build
+/dist
 
-# Firebase Emulators
-/firebase-*.zip
-/.firebase/
+# production / hosting / caches
+.vercel
+.firebase/
 /emulator-ui/
-
-# Logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Environment files (local configs)
-/.env.*
-
-
-# Node
-node_modules/
-pnpm-lock.yaml
-package-lock.json
-
-# TypeScript
-dist/
-build/
-*.tsbuildinfo
-
-# Editor
-.vscode/
-.idea/
-*.sublime-workspace
-*.sublime-project
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Debug
+*.cache
 .cache/
 .eslintcache
 
-# Vite / React
-*.local
-.cache
-public/assets/
+# debug / logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+*.log
+.next-dev*.log
 
-# Tests / Coverage
-coverage/
-*.lcov
+# local config / secrets
+.env*
+.env.example
+client_secret_*.json
+*.pem
+*.key
+certs/
 
-# Docker
+# editor / OS
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.iml
+
+# local assistant / workspace metadata
+AGENTS.md
+CLAUDE.md
+
+# firebase / functions
+/firebase-debug.log
+/firebase-debug.*.log
+.firebaserc
+/firebase.json
+/functions/node_modules/
+/functions/.env
+
+# docker / infra
 docker-compose.override.yml
-/Dockerfile.
-**/.dockerfile
 docker-compose.yml
 docker-images/
-
-# Kubernetes / Terraform / Infrastructure
 .terraform/
 *.tfstate
 *.tfstate.backup
 .helm/
 
-# IDE-specific
-*.iml
-
-# Build artifacts
-/client/dist/
-/server/dist/
-/worker/dist/
-
-# Certificates
-certs/
-*.pem
-*.key
-
+# generated / local assets
+public/uploads/reports/*
+!public/uploads/reports/.gitkeep
 uploads/tmp/
 uploads/*.tmp
+public/assets/
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
