@@ -15,7 +15,38 @@ export function getGeminiApiKey() {
 }
 
 export function getAppBaseUrl() {
-  return process.env.NEXTAUTH_URL ?? "http://localhost:8080";
+  if (process.env.NEXTAUTH_URL) {
+    return process.env.NEXTAUTH_URL;
+  }
+
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+    return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
+  }
+
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+
+  return "http://localhost:8080";
+}
+
+export function getSupabaseStorageConfig() {
+  return {
+    url: process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? null,
+    serviceRoleKey:
+      process.env.SUPABASE_SERVICE_ROLE_KEY ??
+      process.env.SUPABASE_PUBLISHABLE_KEY ??
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
+      process.env.SUPABASE_ANON_KEY ??
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
+      null,
+    bucket: process.env.SUPABASE_STORAGE_BUCKET ?? "report-images",
+  };
+}
+
+export function isSupabaseStorageConfigured() {
+  const { url, serviceRoleKey } = getSupabaseStorageConfig();
+  return Boolean(url && serviceRoleKey);
 }
 
 export function getN8nWebhookConfig() {

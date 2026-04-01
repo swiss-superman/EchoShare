@@ -31,8 +31,9 @@ EchoShare is designed to help communities:
 - Next.js 16 App Router
 - React 19
 - Tailwind CSS 4
-- PostgreSQL
+- Supabase Postgres
 - Prisma 6.19
+- Supabase Storage
 - NextAuth.js with Google OAuth
 - Leaflet + OpenStreetMap + `leaflet.heat`
 - Gemini 2.5 Flash via `@google/genai`
@@ -107,6 +108,7 @@ Real:
 - Auth flow
 - Route structure and protected pages
 - PostgreSQL schema
+- Supabase storage-backed report uploads
 - Typed Prisma queries
 - Report CRUD flow
 - Map rendering
@@ -118,7 +120,6 @@ Real:
 
 Demo-scoped:
 
-- Local filesystem image storage under `public/uploads/reports`
 - Development seed data in `prisma/seed.ts`
 - Seed organizations and water bodies clearly labeled as development seed data
 
@@ -142,5 +143,3 @@ Demo-scoped:
 - [ ] Static assets CDN configuration.
 - [ ] Error pages and 404 handling implemented
 - [ ] Documentation
-
-

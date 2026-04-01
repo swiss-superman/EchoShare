@@ -25,10 +25,8 @@ export default async function SignInPage() {
           {!authConfigured ? (
             <p className="text-sm text-muted">
               Configure `AUTH_SECRET` and either `AUTH_GOOGLE_ID` plus
-              `AUTH_GOOGLE_SECRET` or a valid Google web client JSON in the
-              project root. In all cases add
-              `http://localhost:8080/api/auth/callback/google` as a valid
-              redirect URI in Google Cloud.
+              `AUTH_GOOGLE_SECRET`. The deployed site also needs its own
+              Auth.js callback URL registered in Google Cloud.
             </p>
           ) : null}
         </div>

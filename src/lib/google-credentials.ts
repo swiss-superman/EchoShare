@@ -29,6 +29,11 @@ export function getGoogleClientCredentials() {
     return cachedCredentials;
   }
 
+  if (process.env.NODE_ENV === "production") {
+    cachedCredentials = null;
+    return null;
+  }
+
   let candidate: string | undefined;
 
   try {
