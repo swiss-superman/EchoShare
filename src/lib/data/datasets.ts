@@ -3,6 +3,7 @@ import path from "node:path";
 import { cache } from "react";
 import type { SeverityLevel } from "@prisma/client";
 import { parse } from "csv-parse/sync";
+import { INDIA_CITY_COORDINATES } from "@/lib/data/india-city-coordinates";
 import type {
   MapMarker,
   WasteDatasetHotspot,
@@ -140,7 +141,14 @@ const readWasteDataset = cache(async (): Promise<WasteDatasetBundle> => {
   const cityAccumulator = latestRows.reduce(
     (accumulator, row) => {
       const city = row["City/District"].trim();
-      const location = parseLatLong(row["Landfill Location (Lat, Long)"]);
+      const correctedCityCoordinate = INDIA_CITY_COORDINATES[city];
+      const location =
+        correctedCityCoordinate
+          ? {
+              latitude: correctedCityCoordinate.latitude,
+              longitude: correctedCityCoordinate.longitude,
+            }
+          : parseLatLong(row["Landfill Location (Lat, Long)"]);
 
       if (!location) {
         return accumulator;
@@ -150,7 +158,7 @@ const readWasteDataset = cache(async (): Promise<WasteDatasetBundle> => {
         accumulator.get(city) ??
         {
           city,
-          landfillName: row["Landfill Name"].trim() || `${city} landfill`,
+        landfillName: row["Landfill Name"].trim() || `${city} landfill`,
           latitude: location.latitude,
           longitude: location.longitude,
           totalWasteTonsPerDay: 0,
@@ -236,7 +244,7 @@ const readWasteDataset = cache(async (): Promise<WasteDatasetBundle> => {
         averageEfficiencyScore: entry.averageEfficiencyScore,
         priorityIndex,
         severity,
-        summary: `${numberFormatter.format(entry.totalWasteTonsPerDay)} tons/day of municipal waste in ${latestYear}, with ${Math.round(entry.averageRecyclingRate)}% recycling and an efficiency score of ${entry.averageEfficiencyScore.toFixed(1)}/10.`,
+        summary: `${numberFormatter.format(entry.totalWasteTonsPerDay)} tons/day of municipal waste in ${latestYear}, with ${Math.round(entry.averageRecyclingRate)}% recycling and an efficiency score of ${entry.averageEfficiencyScore.toFixed(1)}/10. Location is mapped to the corrected ${entry.city} city centroid because the raw landfill coordinates in the source CSV are not geographically reliable.`,
       };
     })
     .sort((left, right) => right.priorityIndex - left.priorityIndex);
@@ -246,7 +254,7 @@ const readWasteDataset = cache(async (): Promise<WasteDatasetBundle> => {
     source: "MUNICIPAL_DATASET",
     sourceLabel: "Municipal waste dataset",
     title: `${hotspot.city} waste pressure`,
-    waterBodyName: hotspot.landfillName,
+    waterBodyName: `${hotspot.city} municipal zone`,
     category: hotspot.dominantWasteType,
     severity: hotspot.severity,
     status: null,

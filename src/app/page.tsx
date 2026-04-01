@@ -242,8 +242,8 @@ export default async function Home() {
         </div>
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[1.08fr_0.92fr]">
-        <div className="shell-frame rounded-[2.2rem] p-6 sm:p-8">
+      <section className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1.08fr)_minmax(0,0.92fr)]">
+        <div className="shell-frame min-w-0 rounded-[2.2rem] p-6 sm:p-8">
           <div className="section-kicker">How It Works</div>
           <h2 className="mt-3 font-display text-4xl font-semibold tracking-[-0.055em] text-[#102430]">
             Built for real civic coordination, not just map pins
@@ -271,7 +271,7 @@ export default async function Home() {
           </div>
         </div>
 
-        <div className="shell-frame rounded-[2.2rem] p-6 sm:p-8">
+        <div className="shell-frame min-w-0 rounded-[2.2rem] p-6 sm:p-8">
           <div className="section-kicker">Network Snapshot</div>
           <h2 className="mt-3 font-display text-4xl font-semibold tracking-[-0.055em] text-[#102430]">
             What EchoShare is surfacing right now

@@ -18,9 +18,23 @@ type ReportMapClientProps = {
   markers: MapMarker[];
   focus?: { latitude: number; longitude: number };
   heightClassName?: string;
+  mode?: "default" | "heatmap";
+  viewport?: "auto" | "india";
+  showHeatLegend?: boolean;
 };
 
-function HeatLayer({ markers }: { markers: MapMarker[] }) {
+const INDIA_BOUNDS = L.latLngBounds(
+  [6.4, 67.5],
+  [37.8, 97.5],
+);
+
+function HeatLayer({
+  markers,
+  mode,
+}: {
+  markers: MapMarker[];
+  mode: "default" | "heatmap";
+}) {
   const map = useMap();
   const layerRef = useRef<L.Layer | null>(null);
 
@@ -42,13 +56,15 @@ function HeatLayer({ markers }: { markers: MapMarker[] }) {
         options: Record<string, unknown>,
       ) => L.Layer;
     }).heatLayer(points, {
-      radius: 28,
-      blur: 20,
+      radius: mode === "heatmap" ? 24 : 28,
+      blur: mode === "heatmap" ? 18 : 20,
+      minOpacity: mode === "heatmap" ? 0.38 : 0.24,
       maxZoom: 15,
       gradient: {
-        0.2: "#97d3d0",
-        0.45: "#2c8f98",
-        0.7: "#ca7b32",
+        0.12: "#86e3ff",
+        0.32: "#35b8d9",
+        0.55: "#0e7fa0",
+        0.75: "#e58b3a",
         1: "#b7482d",
       },
     });
@@ -62,7 +78,7 @@ function HeatLayer({ markers }: { markers: MapMarker[] }) {
         layerRef.current = null;
       }
     };
-  }, [map, markers]);
+  }, [map, markers, mode]);
 
   return null;
 }
@@ -70,9 +86,11 @@ function HeatLayer({ markers }: { markers: MapMarker[] }) {
 function ViewportController({
   markers,
   focus,
+  viewport,
 }: {
   markers: MapMarker[];
   focus?: { latitude: number; longitude: number };
+  viewport: "auto" | "india";
 }) {
   const map = useMap();
 
@@ -81,6 +99,11 @@ function ViewportController({
       map.setView([focus.latitude, focus.longitude], Math.max(map.getZoom(), 15), {
         animate: false,
       });
+      return;
+    }
+
+    if (viewport === "india") {
+      map.fitBounds(INDIA_BOUNDS, { animate: false, padding: [16, 16] });
       return;
     }
 
@@ -100,7 +123,7 @@ function ViewportController({
       markers.map((marker) => [marker.latitude, marker.longitude]),
     );
     map.fitBounds(bounds.pad(0.18), { animate: false });
-  }, [focus, map, markers]);
+  }, [focus, map, markers, viewport]);
 
   return null;
 }
@@ -129,10 +152,48 @@ function GeolocateButton() {
   );
 }
 
+function HeatLegend() {
+  return (
+    <div className="pointer-events-none absolute right-4 top-4 z-[1000] w-[220px] rounded-[1.35rem] border border-black/10 bg-[rgba(255,251,245,0.94)] p-4 shadow-[0_18px_40px_rgba(18,31,40,0.16)] backdrop-blur-md">
+      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#0b5061]">
+        India heat scale
+      </div>
+      <div className="mt-2 text-lg font-semibold tracking-[-0.03em] text-[#102934]">
+        Waste and field pressure
+      </div>
+      <div className="mt-3 grid gap-2 text-xs text-[#415661]">
+        {[
+          { label: "Baseline watch", color: "#86e3ff" },
+          { label: "Rising pressure", color: "#35b8d9" },
+          { label: "Sustained burden", color: "#0e7fa0" },
+          { label: "Critical buildup", color: "#e58b3a" },
+          { label: "Immediate action", color: "#b7482d" },
+        ].map((entry) => (
+          <div key={entry.label} className="flex items-center gap-3">
+            <span
+              className="h-4 w-6 rounded-sm border border-black/5"
+              style={{ backgroundColor: entry.color }}
+            />
+            <span>{entry.label}</span>
+          </div>
+        ))}
+      </div>
+      <p className="mt-3 text-[11px] leading-5 text-[#5c6f78]">
+        Heat intensity is built from citizen-report severity plus municipal
+        waste burden from the dataset. Water-quality feeds remain in the side
+        panel because those CSVs do not include measurement coordinates.
+      </p>
+    </div>
+  );
+}
+
 export function ReportMapClient({
   markers,
   focus,
   heightClassName = "h-[560px]",
+  mode = "default",
+  viewport = "auto",
+  showHeatLegend = false,
 }: ReportMapClientProps) {
   const icons = useMemo(
     () => ({
@@ -164,10 +225,13 @@ export function ReportMapClient({
   const initialZoom = focus || markers[0] ? 13 : 5;
 
   return (
-    <div className={`overflow-hidden rounded-[1.7rem] border border-line ${heightClassName}`}>
+    <div className={`relative overflow-hidden rounded-[1.7rem] border border-line ${heightClassName}`}>
       <MapContainer
+        attributionControl={mode !== "heatmap"}
         center={initialCenter}
         className="h-full w-full"
+        maxBounds={viewport === "india" ? INDIA_BOUNDS : undefined}
+        maxBoundsViscosity={viewport === "india" ? 0.95 : undefined}
         scrollWheelZoom
         zoom={initialZoom}
       >
@@ -175,8 +239,8 @@ export function ReportMapClient({
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        <ViewportController focus={focus} markers={markers} />
-        <HeatLayer markers={markers} />
+        <ViewportController focus={focus} markers={markers} viewport={viewport} />
+        <HeatLayer markers={markers} mode={mode} />
         <GeolocateButton />
         {focus ? (
           <Circle
@@ -190,40 +254,43 @@ export function ReportMapClient({
             radius={120}
           />
         ) : null}
-        {markers.map((marker) => (
-          <Marker
-            key={marker.id}
-            icon={icons[marker.source]}
-            position={[marker.latitude, marker.longitude]}
-          >
-            <Popup>
-              <div className="space-y-2">
-                <div className="text-xs uppercase tracking-[0.16em] text-slate-500">
-                  {marker.sourceLabel}
-                </div>
-                <div className="font-semibold">{marker.title}</div>
-                <div className="text-sm text-slate-500">{marker.waterBodyName}</div>
-                <div className="text-sm text-slate-600">
-                  {marker.summary ?? "No AI summary yet."}
-                </div>
-                {marker.metricLabel ? (
-                  <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-slate-700">
-                    {marker.metricLabel}
+        {mode === "default"
+          ? markers.map((marker) => (
+              <Marker
+                key={marker.id}
+                icon={icons[marker.source]}
+                position={[marker.latitude, marker.longitude]}
+              >
+                <Popup>
+                  <div className="space-y-2">
+                    <div className="text-xs uppercase tracking-[0.16em] text-slate-500">
+                      {marker.sourceLabel}
+                    </div>
+                    <div className="font-semibold">{marker.title}</div>
+                    <div className="text-sm text-slate-500">{marker.waterBodyName}</div>
+                    <div className="text-sm text-slate-600">
+                      {marker.summary ?? "No AI summary yet."}
+                    </div>
+                    {marker.metricLabel ? (
+                      <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-slate-700">
+                        {marker.metricLabel}
+                      </div>
+                    ) : null}
+                    {marker.href ? (
+                      <a
+                        className="text-sm font-semibold text-teal-700"
+                        href={marker.href}
+                      >
+                        Open report
+                      </a>
+                    ) : null}
                   </div>
-                ) : null}
-                {marker.href ? (
-                  <a
-                    className="text-sm font-semibold text-teal-700"
-                    href={marker.href}
-                  >
-                    Open report
-                  </a>
-                ) : null}
-              </div>
-            </Popup>
-          </Marker>
-        ))}
+                </Popup>
+              </Marker>
+            ))
+          : null}
       </MapContainer>
+      {showHeatLegend ? <HeatLegend /> : null}
     </div>
   );
 }

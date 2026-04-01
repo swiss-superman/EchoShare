@@ -28,8 +28,8 @@ export default async function CommunityPage() {
         </p>
       </header>
 
-      <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-        <div className="space-y-6">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
+        <div className="min-w-0 space-y-6">
           <form action={createPostAction} className="space-y-4 rounded-[1.8rem] border border-line bg-white/75 p-6">
             <div className="section-kicker">New post</div>
             <h2 className="font-display text-3xl font-semibold tracking-[-0.04em]">
@@ -115,7 +115,7 @@ export default async function CommunityPage() {
           </form>
         </div>
 
-        <div className="space-y-5">
+        <div className="min-w-0 space-y-5">
           {data.posts.length === 0 ? (
             <EmptyState
               detail="No community posts have been created yet. Publish an update or launch a cleanup call."

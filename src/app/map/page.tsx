@@ -13,15 +13,15 @@ export default async function MapPage({ searchParams }: MapPageProps) {
   const data = await getMapData(filters);
 
   return (
-    <section className="grid gap-6 lg:grid-cols-[300px_1fr]">
-      <aside>
+    <section className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
+      <aside className="space-y-4">
         <ReportFilterForm
           filters={data.filters}
           resetHref="/map"
           waterBodies={data.waterBodies}
         />
       </aside>
-      <div className="space-y-5">
+      <div className="min-w-0 space-y-5">
         <header className="shell-frame rounded-[1.8rem] px-6 py-6">
           <div className="section-kicker">Map intelligence</div>
           <h1 className="mt-3 font-display text-4xl font-semibold tracking-[-0.04em]">

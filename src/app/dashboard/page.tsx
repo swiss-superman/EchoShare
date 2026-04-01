@@ -32,8 +32,8 @@ export default async function DashboardPage() {
         <MetricCard detail="Cleanup participation records across events." label="Participation" value={formatNumber(data.participantCount)} />
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[0.8fr_1.2fr]">
-        <section className="rounded-[1.8rem] border border-line bg-white/75 p-6">
+      <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+        <section className="min-w-0 rounded-[1.8rem] border border-line bg-white/75 p-6">
           <div className="flex items-center justify-between">
             <div>
               <div className="section-kicker">Status health</div>
@@ -57,7 +57,7 @@ export default async function DashboardPage() {
           </div>
         </section>
 
-        <section className="space-y-5">
+        <section className="min-w-0 space-y-5">
           <div className="section-kicker">Recent activity</div>
           {data.recentReports.map((report) => (
             <ReportCard key={report.id} report={report} />

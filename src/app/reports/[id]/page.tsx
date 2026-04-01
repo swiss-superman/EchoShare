@@ -83,8 +83,8 @@ export default async function ReportDetailPage({
   const autoRefreshEnabled = analysisState === "PENDING";
 
   return (
-    <section className="grid gap-6 xl:grid-cols-[1.25fr_0.75fr]">
-      <div className="space-y-6">
+    <section className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,0.75fr)]">
+      <div className="min-w-0 space-y-6">
         <article className="shell-frame rounded-[1.9rem] px-6 py-6">
           <div className="flex flex-wrap gap-2">
             <Badge tone="brand">{toTitleCase(report.category)}</Badge>
