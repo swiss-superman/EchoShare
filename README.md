@@ -21,18 +21,21 @@ Create a community based social networking like web app designed for individuals
 ----
 
 # Flow
-1. User logs into the service with their google or apple account.<br>
-2. User tries to post images of litter around the source of their choice.<br>
-3. Evalution of the image to check if it actually is related to litter around a source or just some random image.<br>
-4. Rate limiting to avoid spam posts.<br>
-5. Image is posted successfully with some information like litter type, geolocation and severity given by the user.<br>
-6. Backend updates the map with updated heatmap according to user posts.<br>
-7. The user can then further look for NGOs, Government Orgs and individuals around them within a separate section in the website.<br>
+<pre>
+    1. User logs into the service with their google or apple account.<br>
+    2. User tries to post images of litter around the source of their choice.<br>
+    3. Evalution of the image to check if it actually is related to litter around a source or just some random image.<br>
+    4. Rate limiting to avoid spam posts.<br>
+    5. Image is posted successfully with some information like litter type, geolocation and severity given by the user.<br>
+    6. Backend updates the map with updated heatmap according to user posts.<br>
+    7. The user can then further look for NGOs, Government Orgs and individuals around them within a separate section in the website.<br>
+</pre>
 ----
 
 # Webpage
 1. Once the user is authenticated, they are shown their homepage.<br>
 2. A users homepage has the following:<br>
+    <pre>
     i. Left end.<br>
         a. Has information on the NGOs, Government organizations in the location of their choice.<br>
         b. When hovered, they show information about the organization.(a hyperlink to the orgs website).<br>
@@ -50,29 +53,29 @@ Create a community based social networking like web app designed for individuals
         a. Profile icon.<br>
         b. Allow the users to view their username and other credentials.<br>
         c. A section to view all the upcoming events they have enlisted to volunteer for.<br>
+    </pre>
 
 ----
 
 # Tech Stack
 
 Frontend:
-    1.
-    2.
-    3.
+    1.<br>
+    2.<br>
+    3.<br>
 
 Backend:
-    1.
-    2.
-    3.
+    1.<br>
+    2.<br>
+    3.<br>
 
 Authentication:
-    1.
-    2.
+    1.<br>
+    2.<br>
 
 Database:
-    1.
-    2.
-
+    1.<br>
+    2.<br>
 
 -----
 
