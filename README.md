@@ -38,6 +38,43 @@ EchoShare is designed to help communities:
 - Leaflet + OpenStreetMap + `leaflet.heat`
 - Gemini 2.5 Flash + Gemini embeddings via `@google/genai`
 
+## Tech Stack
+<pre>
+Fronted:
+    1. Vite and React JS.
+    2. Typescript.
+    3. Tailwind CSS
+Backend:
+    1. Supabase
+Database:
+    1. PostgreSQL
+User authentication:
+    1. Google SSO
+</pre>
+
+## Local setup
+
+```bash
+npm install
+npm run prisma:generate
+npx prisma migrate dev --name init
+npm run prisma:seed
+npm run dev
+```
+
+The app runs on:
+
+`http://localhost:8080`
+
+## Verification commands
+
+```bash
+npm run typecheck
+npm run lint
+npm run build
+```
+
+
 ## Environment
 
 Create a local `.env` from `.env.example`.
@@ -96,28 +133,6 @@ You still need the exact Auth.js callback URI registered in Google Cloud:
 
 The existing origin `http://localhost:8080` alone is not enough.
 
-## Local setup
-
-```bash
-npm install
-npm run prisma:generate
-npx prisma migrate dev --name init
-npm run prisma:seed
-npm run dev
-```
-
-The app runs on:
-
-`http://localhost:8080`
-
-## Verification commands
-
-```bash
-npm run typecheck
-npm run lint
-npm run build
-```
-
 ## Data model highlights
 
 - `Report` stores citizen-submitted evidence metadata
@@ -161,12 +176,15 @@ Demo-scoped:
 # Project Checklist
 - [x] Requirement Analysis.
 - [x] Basic Workflow and Webpage design requirement analysis.
-- [ ] Mid hackathon presentation.
-- [ ] Login page configuration.
-- [ ] User authentication & email verification
-- [ ] Frontend responsive & accessible
-- [ ] Reporting & photo storage working
+- [x] Mid hackathon presentation.
+- [x] Login page configuration.
+- [x] User authentication & email verification
+- [x] Frontend responsive & accessible
+- [x] Reporting & photo storage working
 - [ ] Secrets management configured (env vars / vault)
 - [ ] Static assets CDN configuration.
-- [ ] Error pages and 404 handling implemented
 - [ ] Documentation
+
+------------
+
+
