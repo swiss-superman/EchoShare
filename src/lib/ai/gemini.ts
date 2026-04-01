@@ -58,6 +58,24 @@ function normalizeSeverity(value: string | undefined) {
   return value && allowed.has(value) ? value : null;
 }
 
+async function getImageBase64(publicUrl: string) {
+  if (publicUrl.startsWith("/uploads/")) {
+    const absolutePath = `${process.cwd()}\\public${publicUrl.replace(/\//g, "\\")}`;
+    const fs = await import("node:fs/promises");
+    const buffer = await fs.readFile(absolutePath);
+    return buffer.toString("base64");
+  }
+
+  const response = await fetch(publicUrl);
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch image for AI analysis: ${response.status}`);
+  }
+
+  const arrayBuffer = await response.arrayBuffer();
+  return Buffer.from(arrayBuffer).toString("base64");
+}
+
 export async function enrichReportById(reportId: string) {
   const db = dbOrThrow();
   const report = await db.report.findUnique({
@@ -164,14 +182,12 @@ export async function enrichReportById(reportId: string) {
   ];
 
   for (const image of report.images.slice(0, 3)) {
-    if (!image.publicUrl.startsWith("/uploads/")) {
-      continue;
+    try {
+      const base64 = await getImageBase64(image.publicUrl);
+      parts.push(createPartFromBase64(base64, image.mimeType));
+    } catch (error) {
+      console.error(`Skipping image ${image.id} during Gemini enrichment`, error);
     }
-
-    const absolutePath = `${process.cwd()}\\public${image.publicUrl.replace(/\//g, "\\")}`;
-    const fs = await import("node:fs/promises");
-    const buffer = await fs.readFile(absolutePath);
-    parts.push(createPartFromBase64(buffer.toString("base64"), image.mimeType));
   }
 
   const response = await getGeminiClient().models.generateContent({

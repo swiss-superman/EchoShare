@@ -29,9 +29,22 @@ export function getGoogleClientCredentials() {
     return cachedCredentials;
   }
 
-  const candidate = readdirSync(/* turbopackIgnore: true */ process.cwd()).find(
-    (file) => file.startsWith("client_secret_") && file.endsWith(".json"),
-  );
+  if (process.env.NODE_ENV === "production") {
+    cachedCredentials = null;
+    return null;
+  }
+
+  let candidate: string | undefined;
+
+  try {
+    candidate = readdirSync(/* turbopackIgnore: true */ process.cwd()).find(
+      (file) => file.startsWith("client_secret_") && file.endsWith(".json"),
+    );
+  } catch (error) {
+    console.error("Failed to scan for local Google credential JSON", error);
+    cachedCredentials = null;
+    return null;
+  }
 
   if (!candidate) {
     cachedCredentials = null;
@@ -63,4 +76,8 @@ export function getGoogleClientCredentials() {
 
 export function hasGoogleAuthConfig() {
   return Boolean(getGoogleClientCredentials());
+}
+
+export function isGoogleAuthReady() {
+  return Boolean(process.env.AUTH_SECRET && getGoogleClientCredentials());
 }

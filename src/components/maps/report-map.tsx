@@ -106,7 +106,9 @@ export function ReportMap({
     ? [focus.latitude, focus.longitude]
     : markers[0]
       ? [markers[0].latitude, markers[0].longitude]
-      : [12.9716, 77.5946];
+      : [20.5937, 78.9629];
+
+  const initialZoom = focus || markers[0] ? 13 : 5;
 
   function FitBoundsOnLoad() {
     const map = useMap();
@@ -137,7 +139,7 @@ export function ReportMap({
         center={initialCenter}
         className="h-full w-full"
         scrollWheelZoom
-        zoom={13}
+        zoom={initialZoom}
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'

@@ -40,8 +40,8 @@ export function ReportCreateForm({ action }: ReportCreateFormProps) {
             Submit geo-tagged evidence
           </h2>
           <p className="mt-3 max-w-2xl text-sm leading-7 text-muted">
-            Capture what you saw, where it is, and why it matters. Waterline
-            Watch keeps raw citizen evidence separate from AI-assisted
+            Capture what you saw, where it is, and why it matters. EchoShare
+            keeps raw citizen evidence separate from AI-assisted
             classification.
           </p>
         </div>
