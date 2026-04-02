@@ -221,7 +221,7 @@ Demo-scoped:
 
 -----------
 
-# Project Checklist
+## Project Checklist
 - [x] Requirement Analysis.
 - [x] Basic Workflow and Webpage design requirement analysis.
 - [x] Mid hackathon presentation.
@@ -234,3 +234,8 @@ Demo-scoped:
 - [ ] Documentation
 
 ------------
+
+## Samples
+
+For output images of the project look inside Results/
+For the powerpoint presentation and pdf look inside Presentation/
