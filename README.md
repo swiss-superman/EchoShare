@@ -98,7 +98,6 @@ echoshare/
 ├── docs/
 │   ├── architecture.md
 │   ├── ai-automation.md
-│   └── n8n-integration.md
 ├── README.md
 └── package.json
 ```
@@ -289,11 +288,11 @@ Demo-scoped:
 - [x] Reporting & photo storage working
 - [ ] Secrets management configured (env vars / vault)
 - [ ] Static assets CDN configuration.
-- [ ] Documentation
+- [x] Basic Documentation
 
 ------------
 
 ## Samples
 
-For output images of the project look inside Results/
+For output images of the project look inside Results/<br>
 For the powerpoint presentation and pdf look inside Presentation/
