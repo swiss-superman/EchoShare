@@ -14,8 +14,8 @@ export default async function SignInPage() {
           Secure Google sign-in for community contributors
         </h1>
         <p className="mt-4 max-w-2xl text-lg leading-8 text-muted">
-          EchoShare uses Google OAuth only. <!-- Profile records are created on first -->
-          <!-- sign-in and stored in PostgreSQL via the Prisma adapter. -->
+          EchoShare uses Google OAuth only. Profile records are created on first
+          sign-in and stored in PostgreSQL via the Prisma adapter.
         </p>
         <div className="mt-8 flex flex-wrap items-center gap-4">
           <AuthCta
@@ -24,9 +24,9 @@ export default async function SignInPage() {
           />
           {!authConfigured ? (
             <p className="text-sm text-muted">
-            <!-- Configure `AUTH_SECRET` and either `AUTH_GOOGLE_ID` plus -->
-            <!-- `AUTH_GOOGLE_SECRET`. The deployed site also needs its own -->
-            <!-- Auth.js callback URL registered in Google Cloud. -->
+            Configure `AUTH_SECRET` and either `AUTH_GOOGLE_ID` plus
+            `AUTH_GOOGLE_SECRET`. The deployed site also needs its own
+            Auth.js callback URL registered in Google Cloud.
             </p>
           ) : null}
         </div>
