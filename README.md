@@ -1,11 +1,76 @@
 # EchoShare
-
 EchoShare is a community-driven sustainability web app for reporting pollution near water bodies and turning those reports into visible local action.
 
 This repository started from the hackathon concept of tackling pollution, biodiversity loss, and resource overuse in marine and freshwater ecosystems. The current codebase implements that idea as a full-stack Next.js MVP with Google auth, PostgreSQL, map-based reporting, community coordination, stakeholder discovery, AI-assisted enrichment.
 
-## Problem framing
+## Contest Problem Statement
+Topic : **Sustainability and Waste Management**.<br>
+    **Create a technology driven solution to tackle pollution, biodiversity loss, and  resources overuse in marine ecosystems**.
 
+## Proposed solution
+EchoShare - A community-driven sustainability web app for reporting pollution near water bodies and turning those reports into visible local action.
+
+## Stack
+- Next.js 16 App Router
+- React 19
+- Tailwind CSS 4
+- Supabase Postgres
+- Prisma 6.19
+- Supabase Storage
+- NextAuth.js with Google OAuth
+- Leaflet + OpenStreetMap + `leaflet.heat`
+- Gemini 2.5 Flash + Gemini embeddings via `@google/genai`
+
+<pre>
+Fronted:
+    1. Vite and React JS.
+    2. Typescript.
+    3. Tailwind CSS
+Backend:
+    1. Supabase
+Database:
+    1. PostgreSQL
+User authentication:
+    1. Google SSO
+</pre>
+
+## Local setup
+
+```bash
+npm install
+npm run prisma:generate
+npx prisma migrate dev --name init
+npm run prisma:seed
+npm run intelligence:sync
+npm run dev
+```
+
+The app runs on:
+
+`http://localhost:8080`
+
+## Verification commands
+
+```bash
+npm run typecheck
+npm run lint
+npm run build
+```
+
+[for information related to env, read this](#Environment)
+
+## Samples
+For output images of the project look inside Results/<br>
+For the powerpoint presentation and pdf look inside Presentation/
+
+## Members
+Team BIT's o' MIT's (Number: 93)
+- Gowrav M (Gawrav-M)
+- Hemanth Shetty (team lead)
+- Mayura Krishna (KaoKsn, swiss-superman)
+- Mohit HJ
+
+## Problem framing
 People regularly see litter, discharge, and waste buildup near lakes, rivers, canals, ponds, beaches, and wetlands, but the reporting path is fragmented and local coordination is weak.
 
 EchoShare is designed to help communities:
@@ -25,18 +90,6 @@ EchoShare is designed to help communities:
 - Stakeholder directory
 - Gemini-powered AI enrichment stored separately from user evidence
 - Ollama-powered grounded assistant with optional live Google search via SerpAPI
-
-## Stack
-
-- Next.js 16 App Router
-- React 19
-- Tailwind CSS 4
-- Supabase Postgres
-- Prisma 6.19
-- Supabase Storage
-- NextAuth.js with Google OAuth
-- Leaflet + OpenStreetMap + `leaflet.heat`
-- Gemini 2.5 Flash + Gemini embeddings via `@google/genai`
 
 ## Architecture diagram
 
@@ -101,44 +154,6 @@ echoshare/
 ├── README.md
 └── package.json
 ```
-
-## Tech Stack
-<pre>
-Fronted:
-    1. Vite and React JS.
-    2. Typescript.
-    3. Tailwind CSS
-Backend:
-    1. Supabase
-Database:
-    1. PostgreSQL
-User authentication:
-    1. Google SSO
-</pre>
-
-## Local setup
-
-```bash
-npm install
-npm run prisma:generate
-npx prisma migrate dev --name init
-npm run prisma:seed
-npm run intelligence:sync
-npm run dev
-```
-
-The app runs on:
-
-`http://localhost:8080`
-
-## Verification commands
-
-```bash
-npm run typecheck
-npm run lint
-npm run build
-```
-
 
 ## Environment
 
@@ -250,7 +265,6 @@ The existing origin `http://localhost:8080` alone is not enough.
 - `StatusHistory` and `ModerationRecord` support future admin workflows
 
 ## Real vs demo
-
 Real:
 
 - Auth flow
@@ -275,7 +289,6 @@ Demo-scoped:
 - Architecture: [docs/architecture.md](./docs/architecture.md)
 - AI and automation: [docs/ai-automation.md](./docs/ai-automation.md)
 
-
 -----------
 
 ## Project Checklist
@@ -286,13 +299,6 @@ Demo-scoped:
 - [x] User authentication & email verification
 - [x] Frontend responsive & accessible
 - [x] Reporting & photo storage working
-- [ ] Secrets management configured (env vars / vault)
-- [ ] Static assets CDN configuration.
 - [x] Basic Documentation
 
 ------------
-
-## Samples
-
-For output images of the project look inside Results/<br>
-For the powerpoint presentation and pdf look inside Presentation/
