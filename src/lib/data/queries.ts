@@ -1,12 +1,17 @@
 import type {
   CleanupEventStatus,
+  IntelligenceSignalType,
+  IntelligenceSourceType,
+  OrganizationType,
   PollutionCategory,
   PostType,
   Prisma,
   ReportStatus,
   SeverityLevel,
+  VerificationStatus,
 } from "@prisma/client";
 import { getDatasetSignals } from "@/lib/data/datasets";
+import { REAL_DIRECTORY_ORGANIZATIONS } from "@/lib/data/real-organizations";
 import type { MapMarker, PriorityBoardEntry } from "@/lib/data/signal-types";
 import { getDb } from "@/lib/prisma";
 
@@ -59,6 +64,63 @@ export type HomePageCleanupSnapshot = {
   participantCount: number;
   status: CleanupEventStatus;
   isDevelopmentSeed: boolean;
+};
+
+export type DirectoryOrganizationData = {
+  id: string;
+  name: string;
+  slug: string;
+  type: OrganizationType;
+  verification: VerificationStatus;
+  description: string | null;
+  areaServed: string;
+  contactName: string | null;
+  email: string | null;
+  phone: string | null;
+  website: string | null;
+  waterBodyName: string | null;
+  locationLabel: string | null;
+  issueFocus: string[];
+  responseModes: string[];
+  sourceUrl: string | null;
+  sourceLabel: string | null;
+  officeAddress: string | null;
+  volunteerUrl: string | null;
+  complaintUrl: string | null;
+  notes: string | null;
+  isDevelopmentSeed: boolean;
+};
+
+export type IntelligenceSourceData = {
+  id: string;
+  slug: string;
+  name: string;
+  type: IntelligenceSourceType;
+  description: string | null;
+  sourceUrl: string | null;
+  focusLabel: string | null;
+  lastSyncedAt: string | null;
+  lastError: string | null;
+  signalCount: number;
+};
+
+export type IntelligenceSignalData = {
+  id: string;
+  title: string;
+  summary: string;
+  sourceUrl: string;
+  publisher: string;
+  sourceDomain: string;
+  signalType: IntelligenceSignalType;
+  publishedAt: string | null;
+  discoveredAt: string;
+  locationHint: string | null;
+  waterBodyHint: string | null;
+  imageUrl: string | null;
+  priorityScore: number;
+  tags: string[];
+  sourceName: string;
+  sourceType: IntelligenceSourceType;
 };
 
 const numberFormatter = new Intl.NumberFormat("en-IN", {
@@ -248,6 +310,126 @@ function buildReportPriorityBoard(reports: ReportCardData[]): PriorityBoardEntry
       };
     })
     .sort((left, right) => right.priorityIndex - left.priorityIndex);
+}
+
+function parseOrganizationMetadata(tags: unknown) {
+  if (!tags || typeof tags !== "object" || Array.isArray(tags)) {
+    return {
+      issueFocus: [] as string[],
+      responseModes: [] as string[],
+      sourceUrl: null as string | null,
+      sourceLabel: null as string | null,
+      officeAddress: null as string | null,
+      volunteerUrl: null as string | null,
+      complaintUrl: null as string | null,
+      notes: null as string | null,
+    };
+  }
+
+  const metadata = tags as Record<string, unknown>;
+  const toStringArray = (value: unknown) =>
+    Array.isArray(value)
+      ? value.filter(
+          (item): item is string => typeof item === "string" && item.length > 0,
+        )
+      : [];
+  const toOptionalString = (value: unknown) =>
+    typeof value === "string" && value.trim().length > 0 ? value : null;
+
+  return {
+    issueFocus: toStringArray(metadata.issueFocus),
+    responseModes: toStringArray(metadata.responseModes),
+    sourceUrl: toOptionalString(metadata.sourceUrl),
+    sourceLabel: toOptionalString(metadata.sourceLabel),
+    officeAddress: toOptionalString(metadata.officeAddress),
+    volunteerUrl: toOptionalString(metadata.volunteerUrl),
+    complaintUrl: toOptionalString(metadata.complaintUrl),
+    notes: toOptionalString(metadata.notes),
+  };
+}
+
+function parseStringTags(tags: unknown) {
+  return Array.isArray(tags)
+    ? Array.from(
+        new Set(
+          tags.filter(
+            (tag): tag is string => typeof tag === "string" && tag.trim().length > 0,
+          ),
+        ),
+      )
+    : [];
+}
+
+function toDirectoryOrganizationData(
+  organization:
+    | Prisma.OrganizationGetPayload<{
+        include: {
+          location: true;
+          waterBody: true;
+        };
+      }>
+    | (typeof REAL_DIRECTORY_ORGANIZATIONS)[number],
+): DirectoryOrganizationData {
+  const isFallback = !("createdAt" in organization);
+  const metadata = isFallback
+    ? organization.metadata
+    : parseOrganizationMetadata(organization.tags);
+
+  return {
+    id: isFallback ? `fallback-${organization.slug}` : organization.id,
+    name: organization.name,
+    slug: organization.slug,
+    type: organization.type,
+    verification: organization.verification,
+    description: organization.description ?? null,
+    areaServed: organization.areaServed,
+    contactName: organization.contactName ?? null,
+    email: organization.email ?? null,
+    phone: organization.phone ?? null,
+    website: organization.website ?? null,
+    waterBodyName: isFallback ? null : organization.waterBody?.name ?? null,
+    locationLabel: isFallback
+      ? null
+      : [organization.location?.locality, organization.location?.state]
+          .filter(Boolean)
+          .join(", ") || null,
+    issueFocus: metadata.issueFocus,
+    responseModes: metadata.responseModes,
+    sourceUrl: metadata.sourceUrl ?? null,
+    sourceLabel: metadata.sourceLabel ?? null,
+    officeAddress: metadata.officeAddress ?? null,
+    volunteerUrl: metadata.volunteerUrl ?? null,
+    complaintUrl: metadata.complaintUrl ?? null,
+    notes: metadata.notes ?? null,
+    isDevelopmentSeed: isFallback ? false : organization.isDevelopmentSeed,
+  };
+}
+
+function toIntelligenceSignalData(
+  signal: Prisma.IntelligenceSignalGetPayload<{
+    include: {
+      source: true;
+    };
+  }>,
+): IntelligenceSignalData {
+  return {
+    id: signal.id,
+    title: signal.title,
+    summary: signal.summary,
+    sourceUrl: signal.sourceUrl,
+    publisher: signal.publisher,
+    sourceDomain: signal.sourceDomain,
+    signalType: signal.signalType,
+    publishedAt: signal.publishedAt?.toISOString() ?? null,
+    discoveredAt: signal.discoveredAt.toISOString(),
+    locationHint: signal.locationHint,
+    waterBodyHint: signal.waterBodyHint,
+    imageUrl: signal.imageUrl,
+    priorityScore: signal.priorityScore,
+    tags: parseStringTags(signal.tags),
+    sourceName: signal.source.name,
+    sourceType: signal.source.type,
+  };
 }
 
 export async function getHomePageData() {
@@ -679,16 +861,112 @@ export async function getDirectoryData() {
   const db = getDb();
 
   if (!db) {
-    return [];
+    return REAL_DIRECTORY_ORGANIZATIONS.map(toDirectoryOrganizationData);
   }
 
-  return db.organization.findMany({
+  const organizations = await db.organization.findMany({
+    where: {
+      isDevelopmentSeed: false,
+    },
     include: {
       location: true,
       waterBody: true,
     },
     orderBy: [{ verification: "desc" }, { name: "asc" }],
   });
+
+  if (organizations.length === 0) {
+    return REAL_DIRECTORY_ORGANIZATIONS.map(toDirectoryOrganizationData);
+  }
+
+  return organizations.map(toDirectoryOrganizationData);
+}
+
+export async function getIntelligencePageData() {
+  const db = getDb();
+
+  if (!db) {
+    return {
+      metrics: {
+        totalSignals: 0,
+        officialUpdates: 0,
+        newsMentions: 0,
+        watchedSources: 0,
+      },
+      sources: [] as IntelligenceSourceData[],
+      prioritySignals: [] as IntelligenceSignalData[],
+      officialSignals: [] as IntelligenceSignalData[],
+      newsSignals: [] as IntelligenceSignalData[],
+    };
+  }
+
+  const [sources, activeSignalRows, signals] = await db.$transaction([
+    db.intelligenceSource.findMany({
+      where: {
+        isEnabled: true,
+      },
+      orderBy: [{ type: "asc" }, { name: "asc" }],
+    }),
+    db.intelligenceSignal.findMany({
+      where: {
+        status: "ACTIVE",
+      },
+      select: {
+        sourceId: true,
+      },
+    }),
+    db.intelligenceSignal.findMany({
+      where: {
+        status: "ACTIVE",
+      },
+      include: {
+        source: true,
+      },
+      orderBy: [
+        { priorityScore: "desc" },
+        { publishedAt: "desc" },
+        { discoveredAt: "desc" },
+      ],
+      take: 24,
+    }),
+  ]);
+
+  const activeCountMap = activeSignalRows.reduce((accumulator, entry) => {
+    accumulator.set(entry.sourceId, (accumulator.get(entry.sourceId) ?? 0) + 1);
+    return accumulator;
+  }, new Map<string, number>());
+  const sourceData = sources.map((source) => ({
+    id: source.id,
+    slug: source.slug,
+    name: source.name,
+    type: source.type,
+    description: source.description,
+    sourceUrl: source.sourceUrl,
+    focusLabel: source.focusLabel,
+    lastSyncedAt: source.lastSyncedAt?.toISOString() ?? null,
+    lastError: source.lastError,
+    signalCount: activeCountMap.get(source.id) ?? 0,
+  }));
+  const signalData = signals.map(toIntelligenceSignalData);
+  const officialSignals = signalData.filter(
+    (signal) => signal.signalType === "OFFICIAL_UPDATE",
+  );
+  const newsSignals = signalData.filter(
+    (signal) => signal.signalType === "NEWS_MENTION",
+  );
+
+  return {
+    metrics: {
+      totalSignals: signalData.length,
+      officialUpdates: officialSignals.length,
+      newsMentions: newsSignals.length,
+      watchedSources: sourceData.length,
+    },
+    sources: sourceData,
+    prioritySignals: signalData.slice(0, 8),
+    officialSignals: officialSignals.slice(0, 8),
+    newsSignals: newsSignals.slice(0, 8),
+  };
 }
 
 export async function getDashboardData() {

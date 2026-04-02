@@ -29,6 +29,10 @@ export const metadata: Metadata = {
   title: "EchoShare",
   description:
     "A civic coordination platform for reporting pollution near lakes, rivers, beaches, canals, and wetlands.",
+  icons: {
+    icon: "/brand/ecoshare-logo.jpeg",
+    apple: "/brand/ecoshare-logo.jpeg",
+  },
 };
 
 export default function RootLayout({

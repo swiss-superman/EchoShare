@@ -24,6 +24,7 @@ EchoShare is designed to help communities:
 - Community posts and cleanup coordination
 - Stakeholder directory
 - Gemini-powered AI enrichment stored separately from user evidence
+- Ollama-powered grounded assistant with optional live Google search via SerpAPI
 - n8n integration points for alerts and digests without moving core product logic into automation
 
 ## Stack
@@ -59,6 +60,7 @@ npm install
 npm run prisma:generate
 npx prisma migrate dev --name init
 npm run prisma:seed
+npm run intelligence:sync
 npm run dev
 ```
 
@@ -96,6 +98,19 @@ Optional:
 - `GEMINI_IMAGE_TRIAGE_MODEL`
 - `GEMINI_REVIEW_MODEL`
 - `GEMINI_EMBEDDING_MODEL`
+- `FIRECRAWL_API_KEY`
+- `FIRECRAWL_API_BASE_URL`
+- `FIRECRAWL_OFFICIAL_LIMIT`
+- `FIRECRAWL_NEWS_LIMIT`
+- `FIRECRAWL_MAX_AGE_MS`
+- `FIRECRAWL_SEARCH_LOCATION`
+- `OLLAMA_BASE_URL`
+- `OLLAMA_MODEL`
+- `OLLAMA_API_KEY`
+- `SERPAPI_API_KEY`
+- `SERPAPI_BASE_URL`
+- `SERPAPI_LOCATION`
+- `SERPAPI_RESULTS_LIMIT`
 - `NOMINATIM_BASE_URL`
 - `OVERPASS_API_URL`
 - `NOMINATIM_EMAIL`
@@ -115,6 +130,8 @@ DIRECT_URL=postgresql://[DB_USER]:[PASSWORD]@db.[PROJECT_REF].supabase.co:5432/p
 
 This is the runtime split that keeps Prisma stable in Vercel/serverless execution while preserving a direct connection for migrations.
 
+If your network cannot reach the direct Supabase host reliably, use the working Supavisor session pooler for both values locally until you have a stable direct path again.
+
 ### AI model plan
 
 EchoShare does not need a custom-trained ML model for the hackathon build.
@@ -124,6 +141,25 @@ EchoShare does not need a custom-trained ML model for the hackathon build.
 - `gemini-2.5-pro` is reserved as the heavier review model for future moderator escalation flows.
 
 All AI outputs remain clearly separated from raw user-submitted evidence.
+
+### External intelligence layer
+
+EchoShare now includes a separate `Intelligence` tab for Firecrawl-backed official-site and news signals.
+
+- This layer does not write into `Report`.
+- It stores external signals in isolated intelligence tables.
+- It is intentionally credit-aware and syncs only a small curated India watchlist.
+- Social-platform ingestion is excluded until an official API path is configured.
+
+### Grounded assistant layer
+
+EchoShare now includes a separate `Assistant` tab.
+
+- The assistant uses Ollama for generation.
+- The default model is `gpt-oss:120b-cloud`.
+- It grounds answers in EchoShare reports, responders, cleanup events, and intelligence signals.
+- Optional live Google search uses SerpAPI and stays clearly separated from citizen-report truth.
+- If live search is off or unavailable, the assistant still answers from local app data only.
 
 ### Evidence and location trust gates
 
@@ -145,7 +181,6 @@ You still need the exact Auth.js callback URI registered in Google Cloud:
 `http://localhost:8080/api/auth/callback/google`
 
 The existing origin `http://localhost:8080` alone is not enough.
-
 ## Data model highlights
 
 - `Report` stores citizen-submitted evidence metadata
@@ -199,5 +234,3 @@ Demo-scoped:
 - [ ] Documentation
 
 ------------
-
-

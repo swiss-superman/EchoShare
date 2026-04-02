@@ -116,6 +116,24 @@ enum AiAnalysisStatus {
   NEEDS_REVIEW
 }
 
+enum IntelligenceSourceType {
+  OFFICIAL_SITE
+  NEWS_QUERY
+  SOCIAL_QUERY
+}
+
+enum IntelligenceSignalType {
+  OFFICIAL_UPDATE
+  NEWS_MENTION
+  SOCIAL_MENTION
+}
+
+enum IntelligenceSignalStatus {
+  ACTIVE
+  REVIEWED
+  ARCHIVED
+}
+
 enum ModerationTargetType {
   REPORT
   POST
@@ -362,6 +380,54 @@ model Organization {
 
   @@index([type, verification])
   @@index([areaServed])
+}
+
+model IntelligenceSource {
+  id           String                 @id @default(cuid())
+  slug         String                 @unique
+  name         String
+  type         IntelligenceSourceType
+  description  String?                @db.Text
+  sourceUrl    String?
+  query        String?
+  focusLabel   String?
+  isEnabled    Boolean                @default(true)
+  lastSyncedAt DateTime?
+  lastError    String?                @db.Text
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+  signals      IntelligenceSignal[]
+
+  @@index([type, isEnabled])
+}
+
+model IntelligenceSignal {
+  id              String                   @id @default(cuid())
+  sourceId        String
+  signalType      IntelligenceSignalType
+  status          IntelligenceSignalStatus @default(ACTIVE)
+  title           String
+  summary         String                   @db.Text
+  sourceUrl       String                   @unique
+  publisher       String
+  sourceDomain    String
+  publishedAt     DateTime?
+  discoveredAt    DateTime                 @default(now())
+  locationHint    String?
+  waterBodyHint   String?
+  imageUrl        String?
+  priorityScore   Int                      @default(0)
+  tags            Json?
+  rawPayload      Json?
+  contentMarkdown String?                  @db.Text
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+  source          IntelligenceSource       @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  @@index([signalType, publishedAt])
+  @@index([priorityScore, publishedAt])
+  @@index([status, discoveredAt])
+  @@index([publisher])
 }
 
 model CleanupEvent {

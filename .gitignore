@@ -71,6 +71,7 @@ docker-images/
 .helm/
 
 # generated / local assets
+output/
 public/uploads/reports/*
 !public/uploads/reports/.gitkeep
 uploads/tmp/

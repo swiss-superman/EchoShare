@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import type { Session } from "next-auth";
 import { AuthCta } from "@/components/layout/auth-cta";
@@ -7,6 +8,8 @@ const navigation = [
   { href: "/reports", label: "Reports" },
   { href: "/map", label: "Map" },
   { href: "/signals", label: "Signals" },
+  { href: "/intelligence", label: "Intelligence" },
+  { href: "/assistant", label: "Assistant" },
   { href: "/community", label: "Community" },
   { href: "/directory", label: "Directory" },
   { href: "/dashboard", label: "Dashboard" },
@@ -21,13 +24,20 @@ export async function SiteHeader({ sessionPromise }: SiteHeaderProps) {
 
   return (
     <header className="rounded-[1.6rem] border border-black/6 bg-[rgba(255,251,245,0.78)] px-4 py-4 shadow-[0_18px_50px_rgba(17,35,47,0.08)] backdrop-blur-xl sm:px-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-10">
-          <Link className="flex items-center gap-3" href="/">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[linear-gradient(180deg,#123346,#0b1b27)] text-sm font-bold tracking-[0.2em] text-[#a8ece4] shadow-[0_12px_24px_rgba(11,27,39,0.18)]">
-              ES
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <Link className="flex items-center gap-4" href="/">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-[1.25rem] border border-black/6 bg-white shadow-[0_12px_24px_rgba(17,35,47,0.12)]">
+              <Image
+                alt="EcoShare logo"
+                className="h-full w-full object-cover"
+                height={56}
+                priority
+                src="/brand/ecoshare-logo.jpeg"
+                width={56}
+              />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="font-display text-xl font-semibold tracking-[-0.04em]">
                 EchoShare
               </div>
@@ -36,29 +46,31 @@ export async function SiteHeader({ sessionPromise }: SiteHeaderProps) {
               </div>
             </div>
           </Link>
-          <nav className="flex flex-wrap gap-2">
-            {navigation.map((item) => (
-              <Link
-                key={item.href}
-                className="rounded-full px-4 py-2 text-sm font-medium text-[#263944] transition hover:bg-white/72"
-                href={item.href}
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
+
+          <div className="flex items-center gap-3 self-start lg:self-auto">
+            {session?.user ? (
+              <div className="rounded-full border border-line bg-white/80 px-4 py-2 text-sm">
+                {session.user.name ?? session.user.email ?? "Signed in"}
+              </div>
+            ) : null}
+            <AuthCta
+              authConfigured={isGoogleAuthReady()}
+              isSignedIn={Boolean(session?.user)}
+            />
+          </div>
         </div>
-        <div className="flex items-center gap-3 self-start lg:self-auto">
-          {session?.user ? (
-            <div className="rounded-full border border-line bg-white/80 px-4 py-2 text-sm">
-              {session.user.name ?? session.user.email ?? "Signed in"}
-            </div>
-          ) : null}
-          <AuthCta
-            authConfigured={isGoogleAuthReady()}
-            isSignedIn={Boolean(session?.user)}
-          />
-        </div>
+
+        <nav className="flex flex-wrap gap-1.5">
+          {navigation.map((item) => (
+            <Link
+              key={item.href}
+              className="rounded-full px-3.5 py-2 text-sm font-medium whitespace-nowrap text-[#263944] transition hover:bg-white/72"
+              href={item.href}
+            >
+              {item.label}
+            </Link>
+          ))}
+        </nav>
       </div>
     </header>
   );
