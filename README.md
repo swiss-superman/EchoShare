@@ -2,7 +2,7 @@
 
 EchoShare is a community-driven sustainability web app for reporting pollution near water bodies and turning those reports into visible local action.
 
-This repository started from the hackathon concept of tackling pollution, biodiversity loss, and resource overuse in marine and freshwater ecosystems. The current codebase implements that idea as a full-stack Next.js MVP with Google auth, PostgreSQL, map-based reporting, community coordination, stakeholder discovery, AI-assisted enrichment, and n8n integration points.
+This repository started from the hackathon concept of tackling pollution, biodiversity loss, and resource overuse in marine and freshwater ecosystems. The current codebase implements that idea as a full-stack Next.js MVP with Google auth, PostgreSQL, map-based reporting, community coordination, stakeholder discovery, AI-assisted enrichment.
 
 ## Problem framing
 
@@ -25,7 +25,6 @@ EchoShare is designed to help communities:
 - Stakeholder directory
 - Gemini-powered AI enrichment stored separately from user evidence
 - Ollama-powered grounded assistant with optional live Google search via SerpAPI
-- n8n integration points for alerts and digests without moving core product logic into automation
 
 ## Stack
 
@@ -114,10 +113,6 @@ Optional:
 - `NOMINATIM_BASE_URL`
 - `OVERPASS_API_URL`
 - `NOMINATIM_EMAIL`
-- `N8N_REPORT_CREATED_WEBHOOK_URL`
-- `N8N_HIGH_SEVERITY_WEBHOOK_URL`
-- `N8N_WEEKLY_DIGEST_WEBHOOK_URL`
-- `N8N_SHARED_SECRET`
 
 ### Supabase + Prisma connection mode
 
@@ -205,7 +200,6 @@ Real:
 - Stakeholder directory
 - Dashboard metrics
 - Gemini enrichment service
-- n8n integration endpoints
 
 Demo-scoped:
 
@@ -216,7 +210,6 @@ Demo-scoped:
 
 - Architecture: [docs/architecture.md](./docs/architecture.md)
 - AI and automation: [docs/ai-automation.md](./docs/ai-automation.md)
-- n8n integration: [docs/n8n-integration.md](./docs/n8n-integration.md)
 
 
 -----------
