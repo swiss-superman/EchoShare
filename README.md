@@ -38,6 +38,71 @@ EchoShare is designed to help communities:
 - Leaflet + OpenStreetMap + `leaflet.heat`
 - Gemini 2.5 Flash + Gemini embeddings via `@google/genai`
 
+## Architecture diagram
+
+```mermaid
+flowchart LR
+    U["Citizen / Community User"] --> W["EchoShare Web App<br/>Next.js 16 + React 19"]
+    W --> A["Auth.js + Google OAuth"]
+    W --> API["Server Actions + API Routes"]
+    API --> DB["Supabase Postgres<br/>Prisma ORM"]
+    API --> ST["Supabase Storage<br/>Report Images"]
+    API --> MAP["Leaflet + OpenStreetMap"]
+    API --> G["Gemini AI Enrichment"]
+    API --> O["Ollama Assistant<br/>gpt-oss:120b-cloud"]
+    O --> S["SerpAPI / Firecrawl<br/>Live Search Context"]
+    API --> N["n8n Background Workflows"]
+    N --> G
+    DB --> R["Reports, Community, Directory,<br/>Dashboard, Intelligence"]
+```
+
+## Repository map
+
+```text
+echoshare/
+├── prisma/
+│   ├── schema.prisma
+│   ├── migrations/
+│   └── seed.ts
+├── public/
+│   ├── brand/
+│   └── uploads/
+├── scripts/
+│   ├── sync-intelligence.ts
+│   └── sync-real-directory.ts
+├── src/
+│   ├── app/
+│   │   ├── api/
+│   │   ├── assistant/
+│   │   ├── community/
+│   │   ├── dashboard/
+│   │   ├── directory/
+│   │   ├── intelligence/
+│   │   ├── map/
+│   │   ├── reports/
+│   │   └── signals/
+│   ├── components/
+│   │   ├── assistant/
+│   │   ├── layout/
+│   │   ├── maps/
+│   │   ├── reports/
+│   │   └── ui/
+│   └── lib/
+│       ├── ai/
+│       ├── assistant/
+│       ├── automation/
+│       ├── data/
+│       ├── intelligence/
+│       ├── supabase/
+│       └── validation/
+├── docs/
+│   ├── architecture.md
+│   ├── ai-automation.md
+│   └── n8n-integration.md
+├── README.md
+└── package.json
+```
+
 ## Tech Stack
 <pre>
 Fronted:
