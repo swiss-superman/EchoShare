@@ -3,6 +3,7 @@ import { AssistantChat } from "@/components/assistant/assistant-chat";
 import { Badge } from "@/components/ui/badge";
 import { getHomePageData, getIntelligencePageData } from "@/lib/data/queries";
 import {
+  isGeminiConfigured,
   getOllamaConfig,
   getSerpApiConfig,
   isFirecrawlConfigured,
@@ -20,7 +21,12 @@ export default async function AssistantPage() {
   ]);
   const ollamaConfig = getOllamaConfig();
   const serpApiConfig = getSerpApiConfig();
-  const assistantReady = isOllamaConfigured();
+  const assistantMode = isOllamaConfigured()
+    ? "ollama"
+    : isGeminiConfigured()
+      ? "gemini"
+      : "none";
+  const assistantReady = assistantMode !== "none";
   const liveSearchReady = isLiveSearchConfigured();
   const firecrawlReady = isFirecrawlConfigured();
 
@@ -87,17 +93,23 @@ export default async function AssistantPage() {
           <div className="rounded-[1.3rem] border border-line bg-white/68 p-4">
             <div className="flex items-center gap-2 text-xs uppercase tracking-[0.16em] text-muted">
               <Bot className="h-4 w-4" />
-              Ollama model
+              Assistant model
             </div>
             <div className="mt-2 flex items-center gap-2">
               <Badge tone={assistantReady ? "success" : "danger"}>
-                {assistantReady ? "Connected" : "Needs config"}
+                {assistantMode === "ollama"
+                  ? "Ollama connected"
+                  : assistantMode === "gemini"
+                    ? "Gemini fallback"
+                    : "Needs config"}
               </Badge>
             </div>
             <div className="mt-2 text-sm text-muted">
-              {assistantReady
+              {assistantMode === "ollama"
                 ? `${ollamaConfig.model} at ${ollamaConfig.baseUrl}`
-                : "Set OLLAMA_BASE_URL if needed. The model defaults to gpt-oss:120b-cloud."}
+                : assistantMode === "gemini"
+                  ? "Hosted chat will answer with Gemini when Ollama cloud access is not configured."
+                  : "Set OLLAMA_BASE_URL or provide GEMINI_API_KEY so the assistant can answer."}
             </div>
           </div>
         </div>
@@ -105,6 +117,7 @@ export default async function AssistantPage() {
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
         <AssistantChat
+          assistantMode={assistantMode}
           assistantReady={assistantReady}
           liveSearchReady={liveSearchReady}
         />

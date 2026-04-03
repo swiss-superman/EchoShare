@@ -1,5 +1,8 @@
-import { getOllamaConfig } from "@/lib/env";
+import { createUserContent, GoogleGenAI } from "@google/genai";
+import { getGeminiApiKey, getOllamaConfig } from "@/lib/env";
 import type { AssistantMessage, AssistantSource } from "@/lib/assistant/types";
+
+const DEFAULT_GEMINI_ASSISTANT_MODEL = "gemini-2.5-flash-lite";
 
 function trimHistory(messages: AssistantMessage[]) {
   return messages.slice(-8).map((message) => ({
@@ -39,6 +42,61 @@ function buildSystemPrompt(localContext: string, webResultsText: string | null) 
   ].join("\n");
 }
 
+function buildConversationTranscript(messages: AssistantMessage[]) {
+  return trimHistory(messages)
+    .map((message) => `${message.role.toUpperCase()}: ${message.content}`)
+    .join("\n\n");
+}
+
+function getGeminiAssistantModel() {
+  const explicit = process.env.GEMINI_ASSISTANT_MODEL?.trim();
+  return explicit && explicit.length > 0 ? explicit : DEFAULT_GEMINI_ASSISTANT_MODEL;
+}
+
+async function generateGeminiAssistantReply(input: {
+  messages: AssistantMessage[];
+  localContext: string;
+  webSources: AssistantSource[];
+  webResultsText: string | null;
+}) {
+  const apiKey = getGeminiApiKey();
+
+  if (!apiKey) {
+    throw new Error("GEMINI_API_KEY is not configured.");
+  }
+
+  const client = new GoogleGenAI({ apiKey });
+  const response = await client.models.generateContent({
+    model: getGeminiAssistantModel(),
+    contents: createUserContent([
+      {
+        text: [
+          buildSystemPrompt(input.localContext, input.webResultsText),
+          "",
+          "Conversation history:",
+          buildConversationTranscript(input.messages) || "No prior conversation.",
+          "",
+          "Answer the latest user message in clean markdown.",
+        ].join("\n"),
+      },
+    ]),
+    config: {
+      temperature: 0.25,
+    },
+  });
+
+  const reply = response.text?.trim() ?? "";
+
+  if (!reply) {
+    throw new Error("Gemini returned an empty reply.");
+  }
+
+  return {
+    reply,
+    sources: input.webSources,
+  };
+}
+
 export async function generateAssistantReply(input: {
   messages: AssistantMessage[];
   localContext: string;
@@ -51,56 +109,69 @@ export async function generateAssistantReply(input: {
     throw new Error("OLLAMA_MODEL is not configured.");
   }
 
-  const endpoint = resolveChatEndpoint(config.baseUrl);
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-
-  if (config.apiKey) {
-    headers.Authorization = `Bearer ${config.apiKey}`;
+  if (!config.baseUrl) {
+    return generateGeminiAssistantReply(input);
   }
 
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers,
-    cache: "no-store",
-    body: JSON.stringify({
-      model: config.model,
-      stream: false,
-      messages: [
-        {
-          role: "system",
-          content: buildSystemPrompt(input.localContext, input.webResultsText),
-        },
-        ...trimHistory(input.messages),
-      ],
-      options: {
-        temperature: 0.25,
-      },
-    }),
-  });
-
-  if (!response.ok) {
-    const detail = await response.text();
-    throw new Error(`Ollama request failed (${response.status}): ${detail.slice(0, 500)}`);
-  }
-
-  const payload = (await response.json()) as {
-    message?: {
-      content?: string;
+  try {
+    const endpoint = resolveChatEndpoint(config.baseUrl);
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
     };
-    response?: string;
-  };
 
-  const reply =
-    payload.message?.content?.trim() || payload.response?.trim() || "";
+    if (config.apiKey) {
+      headers.Authorization = `Bearer ${config.apiKey}`;
+    }
 
-  if (!reply) {
-    throw new Error("Ollama returned an empty reply.");
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers,
+      cache: "no-store",
+      body: JSON.stringify({
+        model: config.model,
+        stream: false,
+        messages: [
+          {
+            role: "system",
+            content: buildSystemPrompt(input.localContext, input.webResultsText),
+          },
+          ...trimHistory(input.messages),
+        ],
+        options: {
+          temperature: 0.25,
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      const detail = await response.text();
+      throw new Error(`Ollama request failed (${response.status}): ${detail.slice(0, 500)}`);
+    }
+
+    const payload = (await response.json()) as {
+      message?: {
+        content?: string;
+      };
+      response?: string;
+    };
+
+    const reply =
+      payload.message?.content?.trim() || payload.response?.trim() || "";
+
+    if (!reply) {
+      throw new Error("Ollama returned an empty reply.");
+    }
+
+    return {
+      reply,
+      sources: input.webSources,
+    };
+  } catch (error) {
+    if (!getGeminiApiKey()) {
+      throw error;
+    }
+
+    console.warn("Ollama assistant request failed, falling back to Gemini.", error);
+    return generateGeminiAssistantReply(input);
   }
-
-  return {
-    reply,
-    sources: input.webSources,
-  };
 }

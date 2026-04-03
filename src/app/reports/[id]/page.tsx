@@ -154,7 +154,7 @@ export default async function ReportDetailPage({
               </form>
             ) : null}
           </div>
-          <ReportAiAutoRefresh enabled={autoRefreshEnabled} />
+          <ReportAiAutoRefresh enabled={autoRefreshEnabled} reportId={report.id} />
           {analysisState === "COMPLETED" ? (
             <div className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2">

@@ -4,7 +4,11 @@ import { buildAssistantContext } from "@/lib/assistant/context";
 import { generateAssistantReply } from "@/lib/assistant/ollama";
 import { searchWeb } from "@/lib/assistant/serpapi";
 import type { AssistantSource } from "@/lib/assistant/types";
-import { isLiveSearchConfigured, isOllamaConfigured } from "@/lib/env";
+import {
+  isGeminiConfigured,
+  isLiveSearchConfigured,
+  isOllamaConfigured,
+} from "@/lib/env";
 
 export const runtime = "nodejs";
 
@@ -54,11 +58,11 @@ function buildWebResultsText(
 }
 
 export async function POST(request: Request) {
-  if (!isOllamaConfigured()) {
+  if (!isOllamaConfigured() && !isGeminiConfigured()) {
     return NextResponse.json(
       {
         error:
-          "Assistant model is not configured. Set OLLAMA_MODEL and OLLAMA_BASE_URL or OLLAMA_API_KEY-backed cloud access.",
+          "Assistant model is not configured. Add Ollama cloud access or a Gemini API key for hosted replies.",
       },
       { status: 503 },
     );

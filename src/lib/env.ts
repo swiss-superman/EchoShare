@@ -39,6 +39,10 @@ const DEFAULT_OLLAMA_CLOUD_BASE_URL = "https://ollama.com";
 const DEFAULT_SERPAPI_BASE_URL = "https://serpapi.com/search.json";
 const DEFAULT_OLLAMA_MODEL = "gpt-oss:120b-cloud";
 
+function isHostedRuntime() {
+  return Boolean(process.env.VERCEL || process.env.VERCEL_ENV || process.env.VERCEL_URL);
+}
+
 export function getGeminiModelConfig() {
   return {
     reportAnalysisModel: readStringEnv(
@@ -58,16 +62,19 @@ export function getGeminiModelConfig() {
 }
 
 export function getAppBaseUrl() {
-  if (process.env.NEXTAUTH_URL) {
-    return process.env.NEXTAUTH_URL;
+  const nextAuthUrl = process.env.NEXTAUTH_URL?.trim();
+  if (nextAuthUrl) {
+    return nextAuthUrl;
   }
 
-  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
-    return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
+  const productionUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim();
+  if (productionUrl) {
+    return `https://${productionUrl}`;
   }
 
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`;
+  const vercelUrl = process.env.VERCEL_URL?.trim();
+  if (vercelUrl) {
+    return `https://${vercelUrl}`;
   }
 
   return "http://localhost:8080";
@@ -76,7 +83,10 @@ export function getAppBaseUrl() {
 export function getSupabaseStorageConfig() {
   return {
     url: process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? null,
-    serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? null,
+    serviceRoleKey:
+      process.env.SUPABASE_SERVICE_ROLE_KEY ??
+      process.env.SUPABASE_PUBLISHABLE_KEY ??
+      null,
     bucket: process.env.SUPABASE_STORAGE_BUCKET ?? "report-images",
   };
 }
@@ -126,13 +136,18 @@ export function getFirecrawlConfig() {
 
 export function getOllamaConfig() {
   const apiKey = process.env.OLLAMA_API_KEY?.trim() || null;
+  const explicitBaseUrl = process.env.OLLAMA_BASE_URL?.trim() || null;
+  const baseUrl = explicitBaseUrl
+    ? explicitBaseUrl
+    : apiKey
+      ? DEFAULT_OLLAMA_CLOUD_BASE_URL
+      : isHostedRuntime()
+        ? null
+        : DEFAULT_OLLAMA_LOCAL_BASE_URL;
 
   return {
     apiKey,
-    baseUrl: readStringEnv(
-      process.env.OLLAMA_BASE_URL,
-      apiKey ? DEFAULT_OLLAMA_CLOUD_BASE_URL : DEFAULT_OLLAMA_LOCAL_BASE_URL,
-    ),
+    baseUrl,
     model: readStringEnv(process.env.OLLAMA_MODEL, DEFAULT_OLLAMA_MODEL),
   };
 }

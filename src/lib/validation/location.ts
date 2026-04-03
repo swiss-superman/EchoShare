@@ -75,6 +75,14 @@ export type ReportLocationValidationResult = {
   reason: string | null;
 };
 
+export type WaterBodyLocationSuggestion = {
+  name: string;
+  kind: string;
+  latitude: number;
+  longitude: number;
+  displayLabel: string | null;
+};
+
 function buildRequestHeaders() {
   const { contactEmail } = getOpenMapValidationConfig();
   const userAgent = contactEmail
@@ -176,6 +184,20 @@ function namesProbablyMatch(inputName: string, candidateName: string) {
   }
 
   return inputTokens.some((token) => candidateTokens.has(token));
+}
+
+function countExactTokenMatches(tokens: string[], candidateText: string | null | undefined) {
+  if (tokens.length === 0) {
+    return 0;
+  }
+
+  const candidateTokens = new Set(
+    normalizeName(candidateText)
+      .split(" ")
+      .filter((token) => token.length >= 2),
+  );
+
+  return tokens.filter((token) => candidateTokens.has(token)).length;
 }
 
 function getElementCoordinates(element: OverpassElement) {
@@ -489,20 +511,47 @@ export async function validateReportLocation(input: {
     };
   }
 
+  const enforceNamedMatch = getMeaningfulTokens(input.waterBodyName).length > 0;
+  const namedSearchFallback = enforceNamedMatch
+    ? await searchNamedWaterBodyFallback({
+        latitude: input.latitude,
+        longitude: input.longitude,
+        waterBodyName: input.waterBodyName,
+        locality: input.locality,
+        state: input.state,
+        country: input.country,
+      })
+    : null;
+
   if (
-    bestNamedReference &&
-    bestNamedReference.distanceMeters <= NAME_MATCH_ENFORCEMENT_DISTANCE_METERS &&
-    getMeaningfulTokens(input.waterBodyName).length > 0 &&
-    !namesProbablyMatch(input.waterBodyName, bestNamedReference.name ?? "")
+    namedSearchFallback &&
+    namesProbablyMatch(input.waterBodyName, namedSearchFallback.feature.name) &&
+    namedSearchFallback.feature.distanceMeters > 2500
   ) {
     return {
-      status: "accepted",
-      message: null,
-      matchedWaterBodyName: bestNamedReference.name,
+      status: "rejected",
+      message: `The selected pin is far from the mapped location of "${namedSearchFallback.feature.name}". Use the locate button or move the pin onto the real water body before submitting.`,
+      matchedWaterBodyName: namedSearchFallback.feature.name,
       reverseGeocodeLabel: reverseGeocode?.display_name ?? null,
       nearbyWaterBodies,
       reason:
-        "Submitted water body name did not match the nearest mapped named water feature, but the pin is near a plausible water body and was accepted.",
+        "The submitted water body name resolves to a different mapped location than the selected pin.",
+    };
+  }
+
+  if (
+    bestNamedReference &&
+    bestNamedReference.distanceMeters <= NAME_MATCH_ENFORCEMENT_DISTANCE_METERS &&
+    enforceNamedMatch &&
+    !namesProbablyMatch(input.waterBodyName, bestNamedReference.name ?? "")
+  ) {
+    return {
+      status: "rejected",
+      message: `The pin is currently closer to "${bestNamedReference.name}" than to "${input.waterBodyName}". Move the marker onto the actual water body before submitting.`,
+      matchedWaterBodyName: bestNamedReference.name,
+      reverseGeocodeLabel: reverseGeocode?.display_name ?? null,
+      nearbyWaterBodies,
+      reason: "The selected pin is near a different named water body than the one entered.",
     };
   }
 
@@ -616,6 +665,124 @@ async function searchNamedWaterBodyFallback(input: {
       }
     } catch (error) {
       console.error(`Named water body fallback search failed for query "${query}"`, error);
+    }
+  }
+
+  return null;
+}
+
+export async function suggestWaterBodyLocation(input: {
+  waterBodyName: string;
+  locality?: string;
+  state?: string;
+  country?: string;
+  latitude?: number;
+  longitude?: number;
+}) {
+  if (getMeaningfulTokens(input.waterBodyName).length === 0) {
+    return null;
+  }
+
+  const { nominatimUrl } = getOpenMapValidationConfig();
+  const localityTokens = getMeaningfulTokens(input.locality);
+  const stateTokens = getMeaningfulTokens(input.state);
+  const queries = [
+    [
+      input.waterBodyName,
+      input.locality,
+      input.state,
+      input.country,
+    ]
+      .map((value) => value?.trim())
+      .filter(Boolean)
+      .join(", "),
+    input.waterBodyName.trim(),
+  ].filter((value, index, array) => value.length > 0 && array.indexOf(value) === index);
+
+  for (const query of queries) {
+    const url = new URL("/search", nominatimUrl);
+    url.searchParams.set("format", "jsonv2");
+    url.searchParams.set("q", query);
+    url.searchParams.set("limit", "5");
+    url.searchParams.set("addressdetails", "1");
+
+    try {
+      const results = await fetchJsonWithTimeout<NominatimSearchResponseItem[]>(
+        url.toString(),
+        {
+          method: "GET",
+          headers: buildRequestHeaders(),
+        },
+        "Nominatim search",
+      );
+
+      const contextTokens = [...localityTokens, ...stateTokens];
+      const candidate = results
+        .filter(isRelevantNominatimWaterResult)
+        .map((item) => {
+          const displayLabel = item.display_name ?? null;
+          const name = item.name ?? item.display_name ?? input.waterBodyName;
+          const localityMatchCount =
+            countExactTokenMatches(localityTokens, displayLabel) +
+            countExactTokenMatches(localityTokens, name);
+          const stateMatchCount =
+            countExactTokenMatches(stateTokens, displayLabel) +
+            countExactTokenMatches(stateTokens, name);
+
+          return {
+            item,
+            name,
+            displayLabel,
+            nameScore: namesProbablyMatch(input.waterBodyName, name) ? 3 : 0,
+            contextScore: localityMatchCount * 3 + stateMatchCount,
+            localityMatchCount,
+            distanceMeters:
+              typeof input.latitude === "number" && typeof input.longitude === "number"
+                ? haversineDistanceMeters(
+                    input.latitude,
+                    input.longitude,
+                    Number(item.lat),
+                    Number(item.lon),
+                  )
+                : null,
+          };
+        })
+        .sort((left, right) => {
+          const scoreDifference =
+            right.nameScore + right.contextScore - (left.nameScore + left.contextScore);
+
+          if (scoreDifference !== 0) {
+            return scoreDifference;
+          }
+
+          if (left.distanceMeters !== null && right.distanceMeters !== null) {
+            return left.distanceMeters - right.distanceMeters;
+          }
+
+          return left.name.localeCompare(right.name);
+        })[0];
+
+      if (!candidate) {
+        continue;
+      }
+
+      if (contextTokens.length > 0 && candidate.contextScore === 0) {
+        continue;
+      }
+
+      if (localityTokens.length > 0 && candidate.localityMatchCount === 0) {
+        continue;
+      }
+
+      return {
+        name: candidate.name,
+        kind: candidate.item.type ?? candidate.item.class ?? "water-body",
+        latitude: Number(candidate.item.lat),
+        longitude: Number(candidate.item.lon),
+        displayLabel: candidate.displayLabel,
+      } satisfies WaterBodyLocationSuggestion;
+    } catch (error) {
+      console.error(`Water body suggestion lookup failed for query "${query}"`, error);
     }
   }
 

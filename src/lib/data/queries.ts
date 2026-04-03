@@ -457,184 +457,180 @@ export async function getHomePageData() {
     };
   }
 
-  return db.$transaction(async (tx) => {
-    const openReports = await tx.report.count({
-      where: {
-        status: {
-          in: ["NEW", "UNDER_REVIEW", "VERIFIED", "ACTION_PLANNED", "CLEANUP_SCHEDULED"],
-        },
-      },
-    });
-    const resolvedReports = await tx.report.count({
-      where: {
-        status: {
-          equals: "RESOLVED",
-        },
-      },
-    });
-    const visibleReportWhere: Prisma.ReportWhereInput = {
+  const visibleReportWhere: Prisma.ReportWhereInput = {
+    status: {
+      not: "REJECTED",
+    },
+  };
+  const now = new Date();
+
+  const openReports = await db.report.count({
+    where: {
       status: {
-        not: "REJECTED",
+        in: ["NEW", "UNDER_REVIEW", "VERIFIED", "ACTION_PLANNED", "CLEANUP_SCHEDULED"],
       },
-    };
-    const totalVisibleReports = await tx.report.count({
-      where: visibleReportWhere,
-    });
-    const recentReports = await tx.report.findMany({
-      where: visibleReportWhere,
-      orderBy: { observedAt: "desc" },
-      take: 4,
-      include: {
-        location: true,
-        images: true,
-        aiAnalyses: {
-          orderBy: { createdAt: "desc" },
-          take: 1,
-        },
+    },
+  });
+  const resolvedReports = await db.report.count({
+    where: {
+      status: {
+        equals: "RESOLVED",
       },
-    });
-    const grouped = await tx.report.groupBy({
-      by: ["waterBodyName"],
-      where: {
-        status: {
-          not: "REJECTED",
+    },
+  });
+  const totalVisibleReports = await db.report.count({
+    where: visibleReportWhere,
+  });
+  const recentReports = await db.report.findMany({
+    where: visibleReportWhere,
+    orderBy: { observedAt: "desc" },
+    take: 4,
+    include: {
+      location: true,
+      images: true,
+      aiAnalyses: {
+        orderBy: { createdAt: "desc" },
+        take: 1,
+      },
+    },
+  });
+  const grouped = await db.report.groupBy({
+    by: ["waterBodyName"],
+    where: visibleReportWhere,
+    _count: {
+      _all: true,
+    },
+    orderBy: {
+      _count: {
+        waterBodyName: "desc",
+      },
+    },
+    take: 4,
+  });
+  const organizations = await db.organization.count();
+  const verifiedOrganizations = await db.organization.count({
+    where: {
+      verification: "VERIFIED",
+    },
+  });
+  const upcomingEvents = await db.cleanupEvent.count({
+    where: {
+      scheduledAt: {
+        gte: now,
+      },
+      status: {
+        in: ["PLANNED", "ACTIVE"] satisfies CleanupEventStatus[],
+      },
+    },
+  });
+  const totalCleanupEvents = await db.cleanupEvent.count();
+  const participantCount = await db.participant.count({
+    where: {
+      status: {
+        in: ["GOING", "CHECKED_IN", "COMPLETED"],
+      },
+    },
+  });
+  const publishedPosts = await db.post.count({
+    where: {
+      status: "PUBLISHED",
+    },
+  });
+  const completedAiAnalyses = await db.reportAIAnalysis.count({
+    where: {
+      status: "COMPLETED",
+    },
+  });
+  const activeWaterBodies = await db.report.findMany({
+    where: visibleReportWhere,
+    distinct: ["waterBodyName"],
+    select: {
+      waterBodyName: true,
+    },
+  });
+  const nextCleanup = await db.cleanupEvent.findFirst({
+    where: {
+      scheduledAt: {
+        gte: now,
+      },
+      status: {
+        in: ["PLANNED", "ACTIVE"] satisfies CleanupEventStatus[],
+      },
+    },
+    orderBy: { scheduledAt: "asc" },
+    include: {
+      participants: true,
+      waterBody: true,
+    },
+  });
+  const latestPost = await db.post.findFirst({
+    where: {
+      status: "PUBLISHED",
+    },
+    orderBy: { createdAt: "desc" },
+    include: {
+      waterBody: true,
+      author: {
+        include: {
+          profile: true,
         },
       },
       _count: {
-        _all: true,
-      },
-      orderBy: {
-        _count: {
-          waterBodyName: "desc",
+        select: {
+          comments: true,
         },
       },
-      take: 4,
-    });
-    const organizations = await tx.organization.count();
-    const verifiedOrganizations = await tx.organization.count({
-      where: {
-        verification: "VERIFIED",
-      },
-    });
-    const upcomingEvents = await tx.cleanupEvent.count({
-      where: {
-        scheduledAt: {
-          gte: new Date(),
-        },
-        status: {
-          in: ["PLANNED", "ACTIVE"] satisfies CleanupEventStatus[],
-        },
-      },
-    });
-    const totalCleanupEvents = await tx.cleanupEvent.count();
-    const participantCount = await tx.participant.count({
-      where: {
-        status: {
-          in: ["GOING", "CHECKED_IN", "COMPLETED"],
-        },
-      },
-    });
-    const publishedPosts = await tx.post.count({
-      where: {
-        status: "PUBLISHED",
-      },
-    });
-    const completedAiAnalyses = await tx.reportAIAnalysis.count({
-      where: {
-        status: "COMPLETED",
-      },
-    });
-    const activeWaterBodies = await tx.report.findMany({
-      where: visibleReportWhere,
-      distinct: ["waterBodyName"],
-      select: {
-        waterBodyName: true,
-      },
-    });
-    const nextCleanup = await tx.cleanupEvent.findFirst({
-      where: {
-        scheduledAt: {
-          gte: new Date(),
-        },
-        status: {
-          in: ["PLANNED", "ACTIVE"] satisfies CleanupEventStatus[],
-        },
-      },
-      orderBy: { scheduledAt: "asc" },
-      include: {
-        participants: true,
-        waterBody: true,
-      },
-    });
-    const latestPost = await tx.post.findFirst({
-      where: {
-        status: "PUBLISHED",
-      },
-      orderBy: { createdAt: "desc" },
-      include: {
-        waterBody: true,
-        author: {
-          include: {
-            profile: true,
-          },
-        },
-        _count: {
-          select: {
-            comments: true,
-          },
-        },
-      },
-    });
-
-    return {
-      metrics: {
-        totalReports: totalVisibleReports,
-        openReports,
-        resolvedReports,
-        organizations,
-        verifiedOrganizations,
-        upcomingEvents,
-        totalCleanupEvents,
-        participantCount,
-        publishedPosts,
-        completedAiAnalyses,
-        activeWaterBodies: activeWaterBodies.length,
-      },
-      recentReports: recentReports.map(toReportCard),
-      topWaterBodies: grouped.map((entry) => ({
-        name: entry.waterBodyName,
-        reportCount: entry._count._all,
-      })),
-      latestPost: latestPost
-        ? {
-            id: latestPost.id,
-            title: latestPost.title,
-            excerpt: latestPost.body.slice(0, 220).trim(),
-            type: latestPost.type,
-            createdAt: latestPost.createdAt.toISOString(),
-            commentCount: latestPost._count.comments,
-            waterBodyName: latestPost.waterBody?.name ?? null,
-            authorName:
-              latestPost.author.profile?.displayName ??
-              latestPost.author.name ??
-              latestPost.author.email ??
-              null,
-            isDevelopmentSeed: latestPost.isDevelopmentSeed,
-          }
-        : null,
-      nextCleanup: nextCleanup
-        ? {
-            id: nextCleanup.id,
-            title: nextCleanup.title,
-            scheduledAt: nextCleanup.scheduledAt.toISOString(),
-            waterBodyName: nextCleanup.waterBody.name,
-            participantCount: nextCleanup.participants.length,
-            status: nextCleanup.status,
-            isDevelopmentSeed: nextCleanup.isDevelopmentSeed,
-          }
-        : null,
-    };
+    },
   });
+
+  return {
+    metrics: {
+      totalReports: totalVisibleReports,
+      openReports,
+      resolvedReports,
+      organizations,
+      verifiedOrganizations,
+      upcomingEvents,
+      totalCleanupEvents,
+      participantCount,
+      publishedPosts,
+      completedAiAnalyses,
+      activeWaterBodies: activeWaterBodies.length,
+    },
+    recentReports: recentReports.map(toReportCard),
+    topWaterBodies: grouped.map((entry) => ({
+      name: entry.waterBodyName,
+      reportCount: entry._count._all,
+    })),
+    latestPost: latestPost
+      ? {
+          id: latestPost.id,
+          title: latestPost.title,
+          excerpt: latestPost.body.slice(0, 220).trim(),
+          type: latestPost.type,
+          createdAt: latestPost.createdAt.toISOString(),
+          commentCount: latestPost._count.comments,
+          waterBodyName: latestPost.waterBody?.name ?? null,
+          authorName:
+            latestPost.author.profile?.displayName ??
+            latestPost.author.name ??
+            latestPost.author.email ??
+            null,
+          isDevelopmentSeed: latestPost.isDevelopmentSeed,
+        }
+      : null,
+    nextCleanup: nextCleanup
+      ? {
+          id: nextCleanup.id,
+          title: nextCleanup.title,
+          scheduledAt: nextCleanup.scheduledAt.toISOString(),
+          waterBodyName: nextCleanup.waterBody.name,
+          participantCount: nextCleanup.participants.length,
+          status: nextCleanup.status,
+          isDevelopmentSeed: nextCleanup.isDevelopmentSeed,
+        }
+      : null,
+  };
 }
 
 export async function getReportListData(filters: ReportFilters) {
@@ -983,69 +979,67 @@ export async function getDashboardData() {
     };
   }
 
-  return db.$transaction(async (tx) => {
-    const visibleReportWhere: Prisma.ReportWhereInput = {
-      status: {
-        not: "REJECTED",
-      },
-    };
-    const totalReports = await tx.report.count({ where: visibleReportWhere });
-    const resolvedReports = await tx.report.count({
-      where: {
-        status: "RESOLVED",
-      },
-    });
-    const activeWaterBodies = await tx.report.findMany({
-      where: visibleReportWhere,
-      distinct: ["waterBodyName"],
-      select: {
-        waterBodyName: true,
-      },
-    });
-    const participantCount = await tx.participant.count({
-      where: {
-        status: {
-          in: ["GOING", "CHECKED_IN", "COMPLETED"],
-        },
-      },
-    });
-    const topWaterBodies = await tx.report.groupBy({
-      by: ["waterBodyName"],
-      where: visibleReportWhere,
-      _count: {
-        _all: true,
-      },
-      orderBy: {
-        _count: {
-          waterBodyName: "desc",
-        },
-      },
-      take: 5,
-    });
-    const recentReports = await tx.report.findMany({
-      where: visibleReportWhere,
-      orderBy: { observedAt: "desc" },
-      take: 5,
-      include: {
-        location: true,
-        images: true,
-        aiAnalyses: {
-          orderBy: { createdAt: "desc" },
-          take: 1,
-        },
-      },
-    });
-
-    return {
-      totalReports,
-      resolvedReports,
-      activeWaterBodies: activeWaterBodies.length,
-      participantCount,
-      topWaterBodies: topWaterBodies.map((entry) => ({
-        waterBodyName: entry.waterBodyName,
-        count: entry._count._all,
-      })),
-      recentReports: recentReports.map(toReportCard),
-    };
+  const visibleReportWhere: Prisma.ReportWhereInput = {
+    status: {
+      not: "REJECTED",
+    },
+  };
+  const totalReports = await db.report.count({ where: visibleReportWhere });
+  const resolvedReports = await db.report.count({
+    where: {
+      status: "RESOLVED",
+    },
   });
+  const activeWaterBodies = await db.report.findMany({
+    where: visibleReportWhere,
+    distinct: ["waterBodyName"],
+    select: {
+      waterBodyName: true,
+    },
+  });
+  const participantCount = await db.participant.count({
+    where: {
+      status: {
+        in: ["GOING", "CHECKED_IN", "COMPLETED"],
+      },
+    },
+  });
+  const topWaterBodies = await db.report.groupBy({
+    by: ["waterBodyName"],
+    where: visibleReportWhere,
+    _count: {
+      _all: true,
+    },
+    orderBy: {
+      _count: {
+        waterBodyName: "desc",
+      },
+    },
+    take: 5,
+  });
+  const recentReports = await db.report.findMany({
+    where: visibleReportWhere,
+    orderBy: { observedAt: "desc" },
+    take: 5,
+    include: {
+      location: true,
+      images: true,
+      aiAnalyses: {
+        orderBy: { createdAt: "desc" },
+        take: 1,
+      },
+    },
+  });
+
+  return {
+    totalReports,
+    resolvedReports,
+    activeWaterBodies: activeWaterBodies.length,
+    participantCount,
+    topWaterBodies: topWaterBodies.map((entry) => ({
+      waterBodyName: entry.waterBodyName,
+      count: entry._count._all,
+    })),
+    recentReports: recentReports.map(toReportCard),
+  };
 }

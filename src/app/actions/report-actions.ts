@@ -5,7 +5,6 @@ import { redirect } from "next/navigation";
 import { after } from "next/server";
 import {
   enqueueReportEnrichment,
-  enrichReportById,
   validateReportEvidenceUpload,
 } from "@/lib/ai/gemini";
 import {
@@ -53,7 +52,7 @@ async function runQueuedReportTasks(input: {
     return;
   }
 
-  const handedToAutomation = await emitReportCreatedWebhook({
+  await emitReportCreatedWebhook({
     reportId: input.reportId,
     analysisId: input.analysisId,
     title: input.title,
@@ -63,16 +62,6 @@ async function runQueuedReportTasks(input: {
     reportUrl: input.reportUrl,
     aiRequested: true,
   });
-
-  if (handedToAutomation) {
-    return;
-  }
-
-  try {
-    await enrichReportById(input.reportId, input.analysisId);
-  } catch (error) {
-    console.error("Report enrichment failed", error);
-  }
 }
 
 export async function createReportAction(
@@ -229,15 +218,7 @@ export async function createReportAction(
 
 export async function runReportAiEnrichmentAction(reportId: string) {
   await requireUser();
-  const analysisId = await enqueueReportEnrichment(reportId);
-
-  after(async () => {
-    try {
-      await enrichReportById(reportId, analysisId);
-    } catch (error) {
-      console.error("Manual report enrichment failed", error);
-    }
-  });
+  await enqueueReportEnrichment(reportId);
 
   revalidateCorePaths();
   revalidatePath(`/reports/${reportId}`);

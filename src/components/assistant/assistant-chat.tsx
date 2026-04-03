@@ -204,9 +204,11 @@ function MessageBubble({ message }: { message: AssistantMessage }) {
 }
 
 export function AssistantChat({
+  assistantMode,
   assistantReady,
   liveSearchReady,
 }: {
+  assistantMode: "ollama" | "gemini" | "none";
   assistantReady: boolean;
   liveSearchReady: boolean;
 }) {
@@ -315,7 +317,11 @@ export function AssistantChat({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Badge tone={assistantReady ? "success" : "danger"}>
-            {assistantReady ? "Ollama ready" : "Ollama config needed"}
+            {assistantMode === "ollama"
+              ? "Ollama ready"
+              : assistantMode === "gemini"
+                ? "Gemini ready"
+                : "Assistant config needed"}
           </Badge>
           <Badge tone={liveSearchReady ? "brand" : "muted"}>
             {liveSearchReady ? "Live search available" : "Live search off"}

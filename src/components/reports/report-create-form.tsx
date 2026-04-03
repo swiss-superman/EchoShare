@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { createReportAction } from "@/app/actions/report-actions";
 import { initialReportCreateState } from "@/components/reports/report-create-form-state";
@@ -43,6 +43,17 @@ export function ReportCreateForm() {
     longitude: 77.5946,
   });
   const [files, setFiles] = useState<File[]>([]);
+  const [lookupState, setLookupState] = useState<{
+    status: "idle" | "loading" | "success" | "error";
+    message: string | null;
+  }>({
+    status: "idle",
+    message: null,
+  });
+  const waterBodyNameRef = useRef<HTMLInputElement | null>(null);
+  const localityRef = useRef<HTMLInputElement | null>(null);
+  const stateRef = useRef<HTMLInputElement | null>(null);
+  const countryRef = useRef<HTMLInputElement | null>(null);
 
   const previews = useMemo(
     () => files.map((file) => ({ name: file.name, url: URL.createObjectURL(file) })),
@@ -62,6 +73,74 @@ export function ReportCreateForm() {
   const descriptionError = state.fieldErrors?.description?.[0];
   const latitudeError = state.fieldErrors?.latitude?.[0];
   const longitudeError = state.fieldErrors?.longitude?.[0];
+  const lookupMessageTone =
+    lookupState.status === "error"
+      ? "text-rose-700"
+      : lookupState.status === "success"
+        ? "text-emerald-700"
+        : "text-muted";
+
+  async function locateFromWaterBodyName() {
+    const waterBodyName = waterBodyNameRef.current?.value.trim() ?? "";
+
+    if (waterBodyName.length < 2) {
+      setLookupState({
+        status: "error",
+        message: "Enter a water body name first, then use the locate action.",
+      });
+      return;
+    }
+
+    setLookupState({
+      status: "loading",
+      message: "Looking up the mapped water body location...",
+    });
+
+    const params = new URLSearchParams({
+      name: waterBodyName,
+      locality: localityRef.current?.value.trim() ?? "",
+      state: stateRef.current?.value.trim() ?? "",
+      country: countryRef.current?.value.trim() ?? "India",
+      latitude: String(coordinates.latitude),
+      longitude: String(coordinates.longitude),
+    });
+
+    try {
+      const response = await fetch(`/api/locations/water-body?${params.toString()}`, {
+        cache: "no-store",
+      });
+      const payload = (await response.json()) as {
+        ok?: boolean;
+        error?: string;
+        suggestion?: {
+          name: string;
+          latitude: number;
+          longitude: number;
+        };
+      };
+
+      if (!response.ok || !payload.suggestion) {
+        throw new Error(payload.error ?? "Could not find that mapped water body.");
+      }
+
+      setCoordinates({
+        latitude: payload.suggestion.latitude,
+        longitude: payload.suggestion.longitude,
+      });
+      setLookupState({
+        status: "success",
+        message: `Pinned "${payload.suggestion.name}" from the map lookup. Review and fine-tune if needed.`,
+      });
+    } catch (error) {
+      setLookupState({
+        status: "error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Could not find that water body on the map.",
+      });
+    }
+  }
 
   return (
     <form action={formAction} className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
@@ -108,6 +187,7 @@ export function ReportCreateForm() {
               minLength={2}
               name="waterBodyName"
               placeholder="Ulsoor Lake south edge"
+              ref={waterBodyNameRef}
               required
               type="text"
             />
@@ -283,6 +363,23 @@ export function ReportCreateForm() {
           >
             Use my current location
           </button>
+          <button
+            className="rounded-full border border-line-strong px-4 py-3 text-sm font-semibold transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-70"
+            disabled={lookupState.status === "loading"}
+            onClick={() => {
+              void locateFromWaterBodyName();
+            }}
+            type="button"
+          >
+            {lookupState.status === "loading"
+              ? "Locating water body..."
+              : "Locate from water-body name"}
+          </button>
+          {lookupState.message ? (
+            <p className={`text-xs leading-6 ${lookupMessageTone}`}>
+              {lookupState.message}
+            </p>
+          ) : null}
         </section>
 
         <section className="space-y-4 rounded-[1.8rem] border border-line bg-white/75 p-6">
@@ -304,6 +401,7 @@ export function ReportCreateForm() {
               className="w-full rounded-2xl border border-line bg-white px-4 py-3"
               name="locality"
               placeholder="Ward / neighborhood"
+              ref={localityRef}
               type="text"
             />
           </label>
@@ -320,6 +418,7 @@ export function ReportCreateForm() {
             <input
               className="w-full rounded-2xl border border-line bg-white px-4 py-3"
               name="state"
+              ref={stateRef}
               type="text"
             />
           </label>
@@ -329,6 +428,7 @@ export function ReportCreateForm() {
               className="w-full rounded-2xl border border-line bg-white px-4 py-3"
               defaultValue="India"
               name="country"
+              ref={countryRef}
               type="text"
             />
           </label>
